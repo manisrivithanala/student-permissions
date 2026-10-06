@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Permission Slip | College Permission</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script type="module" src="./firebase-boot.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #64748b;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    /* Action bar */
+    .action-bar {
+      position: fixed; top: 0; left: 0; right: 0;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 0.8rem 1.5rem;
+      display: flex; justify-content: space-between;
+      align-items: center; z-index: 100;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      flex-wrap: wrap; gap: 0.6rem;
+    }
+    .action-bar-left { display: flex; align-items: center; gap: 10px; color: #e2e8f0; }
+    .action-bar-left i { color: #60a5fa; font-size: 1.2rem; }
+    .action-bar-left strong { font-size: 0.88rem; color: #f1f5f9; }
+    .action-bar-left span { font-size: 0.7rem; color: #94a3b8; display: block; }
+
+    .action-buttons { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .btn-action {
+      padding: 0.55rem 1.1rem; border-radius: 9px;
+      font-size: 0.78rem; font-weight: 700;
+      cursor: pointer; border: none;
+      display: inline-flex; align-items: center; gap: 6px;
+      transition: 0.15s; font-family: inherit;
+    }
+    .btn-action.primary {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: white;
+      box-shadow: 0 6px 16px -6px #3b82f680;
+    }
+    .btn-action.primary:hover { transform: translateY(-2px); }
+    .btn-action.outline {
+      background: rgba(255,255,255,0.1);
+      color: #e2e8f0;
+      border: 1.5px solid rgba(255,255,255,0.2);
+    }
+    .btn-action.outline:hover { background: rgba(255,255,255,0.18); }
+    .btn-action:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .slip-wrapper {
+      max-width: 800px;
+      width: 100%;
+      margin-top: 70px;
+    }
+
+    /* LOCKED STATE */
+    .locked-card {
+      background: white;
+      border-radius: 20px;
+      padding: 3rem 2rem;
+      text-align: center;
+      max-width: 520px;
+      margin: 0 auto;
+      box-shadow: 0 30px 60px -15px rgba(0,0,0,0.4);
+    }
+    .locked-icon {
+      width: 90px; height: 90px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      display: inline-flex; align-items: center; justify-content: center;
+      color: white; font-size: 2.4rem;
+      margin-bottom: 1.3rem;
+      box-shadow: 0 12px 30px -8px #f59e0b80;
+    }
+    .locked-card h2 { font-size: 1.5rem; font-weight: 800; color: #1e293b; margin-bottom: 0.7rem; }
+    .locked-card p { font-size: 0.9rem; color: #64748b; line-height: 1.6; margin-bottom: 1.6rem; }
+    .locked-card .status-badge {
+      display: inline-block;
+      padding: 0.5rem 1.2rem;
+      border-radius: 40px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+    }
+    .locked-card .status-badge.pending { background: #fef3c7; color: #b45309; }
+    .locked-card .status-badge.rejected { background: #fee2e2; color: #b91c1c; }
+    .locked-card .status-badge.expired { background: #e5e7eb; color: #4b5563; }
+
+    .progress-flow {
+      display: flex; justify-content: center; align-items: center;
+      gap: 0.5rem; margin: 1.5rem 0; flex-wrap: wrap;
+    }
+    .flow-step {
+      display: flex; flex-direction: column; align-items: center; gap: 5px;
+      min-width: 70px;
+    }
+    .flow-circle {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.85rem; font-weight: 700;
+      background: #e5e7eb; color: #94a3b8;
+      border: 2px solid #cbd5e1;
+    }
+    .flow-circle.done { background: #10b981; color: white; border-color: #059669; }
+    .flow-circle.current { background: #f59e0b; color: white; border-color: #d97706; box-shadow: 0 0 0 4px #fef3c650; }
+    .flow-label { font-size: 0.6rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; }
+
+    .locked-card .btn-back {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 0.75rem 1.5rem;
+      background: #1e293b;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+    .locked-card .btn-back:hover { background: #0f172a; transform: translateY(-2px); }
+
+    /* THE PAPER */
+    .permission-slip {
+      background: #ffffff;
+      border-radius: 4px;
+      overflow: hidden;
+      box-shadow: 0 30px 60px -15px rgba(0,0,0,0.35), 0 8px 20px -8px rgba(0,0,0,0.2);
+      position: relative;
+      border: 1px solid #94a3b8;
+    }
+
+    .permission-slip::before {
+      content: 'BVCITS';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%) rotate(-30deg);
+      font-size: 11rem;
+      font-weight: 900;
+      color: #1e3a8a;
+      opacity: 0.03;
+      pointer-events: none;
+      z-index: 0;
+      letter-spacing: 0.06em;
+    }
+
+    /* HEADER */
+    .slip-header {
+      padding: 1.5rem 2rem 1rem;
+      background: linear-gradient(135deg, #f0f9ff 0%, #dbeafe 100%);
+      border-bottom: 4px double #0284c7;
+      position: relative;
+      z-index: 2;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .college-info {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex: 1;
+    }
+
+    .college-logo {
+      width: 62px; height: 62px;
+      background: linear-gradient(135deg, #1e3a8a, #1e40af);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fbbf24;
+      font-size: 1.8rem;
+      flex-shrink: 0;
+      box-shadow: 0 6px 16px -6px #1e3a8a80;
+    }
+
+    .college-text h1 {
+      font-size: 1.2rem;
+      font-weight: 900;
+      color: #1e3a8a;
+      letter-spacing: 0.02em;
+      line-height: 1.15;
+      text-transform: uppercase;
+    }
+
+    .college-text .sub {
+      font-size: 0.7rem;
+      color: #0369a1;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin-top: 3px;
+    }
+
+    .id-box {
+      text-align: right;
+      padding: 0.55rem 0.9rem;
+      background: white;
+      border: 1.5px solid #0284c7;
+      border-radius: 8px;
+    }
+
+    .id-box label {
+      font-size: 0.58rem;
+      color: #0369a1;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      display: block;
+    }
+
+    .id-box .perm-id {
+      font-size: 0.95rem;
+      font-weight: 900;
+      color: #1e3a8a;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.03em;
+      margin-top: 2px;
+    }
+
+    .slip-title {
+      text-align: center;
+      font-size: 0.8rem;
+      font-weight: 900;
+      color: #1e3a8a;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      padding: 0.6rem 0;
+      border-top: 1px solid #bae6fd;
+      border-bottom: 1px solid #bae6fd;
+      margin-top: 0.8rem;
+      background: white;
+    }
+
+    /* BODY */
+    .slip-body {
+      padding: 1.6rem 2rem 1.4rem;
+      position: relative;
+      z-index: 2;
+      background: white;
+    }
+
+    .slip-grid {
+      display: grid;
+      grid-template-columns: 130px 1fr 175px;
+      gap: 1.4rem;
+      align-items: start;
+    }
+
+    /* STUDENT PHOTO */
+    .student-photo-box {
+      text-align: center;
+    }
+
+    .student-photo {
+      width: 120px;
+      height: 140px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #1e3a8a, #1e40af);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 2.5rem;
+      font-weight: 800;
+      overflow: hidden;
+      box-shadow: 0 8px 20px -8px #1e3a8a80;
+      border: 3px solid white;
+      outline: 1.5px solid #0284c7;
+      margin: 0 auto;
+    }
+
+    .student-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .photo-label {
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      color: #0369a1;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      margin-top: 8px;
+    }
+
+    /* Details */
+    .details-side .detail-row {
+      display: grid;
+      grid-template-columns: 130px 1fr;
+      gap: 0.4rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px dotted #cbd5e1;
+      font-size: 0.84rem;
+    }
+
+    .details-side .detail-row:last-child { border-bottom: none; }
+
+    .detail-row .label {
+      color: #475569;
+      font-weight: 700;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding-top: 2px;
+    }
+
+    .detail-row .value {
+      color: #0f172a;
+      font-weight: 700;
+      font-size: 0.86rem;
+      word-break: break-word;
+    }
+
+    /* QR Side */
+    .qr-side { text-align: center; }
+
+    .qr-frame {
+      background: white;
+      border: 3px solid #1e3a8a;
+      border-radius: 10px;
+      padding: 10px;
+      display: inline-block;
+      box-shadow: 0 8px 20px -8px #1e3a8a60;
+      position: relative;
+    }
+
+    .qr-frame::after {
+      content: '';
+      position: absolute;
+      top: -8px; left: -8px; right: -8px; bottom: -8px;
+      border: 2px solid #f59e0b;
+      border-radius: 16px;
+      opacity: 0.55;
+      pointer-events: none;
+    }
+
+    #qrcode { width: 145px; height: 145px; }
+    #qrcode img { width: 100% !important; height: 100% !important; }
+
+    .qr-label {
+      font-size: 0.6rem;
+      color: #475569;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-top: 10px;
+    }
+
+    .qr-id-text {
+      font-size: 0.68rem;
+      font-weight: 900;
+      color: #1e3a8a;
+      font-family: 'Courier New', monospace;
+      margin-top: 4px;
+      letter-spacing: 0.04em;
+    }
+
+    .qr-hint {
+      font-size: 0.6rem;
+      color: #64748b;
+      margin-top: 6px;
+      font-style: italic;
+      font-weight: 500;
+    }
+
+    /* FOOTER */
+    .slip-footer {
+      padding: 1.2rem 2rem 1.4rem;
+      background: linear-gradient(135deg, #f0f9ff 0%, #dbeafe 100%);
+      border-top: 4px double #0284c7;
+      position: relative;
+      z-index: 2;
+    }
+
+    .verify-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .verify-card {
+      background: white;
+      border-radius: 10px;
+      padding: 0.8rem 1rem;
+      border: 1.5px solid #86efac;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .verify-check {
+      width: 34px; height: 34px;
+      background: #dcfce7;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #15803d;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+
+    .verify-info strong {
+      display: block;
+      font-size: 0.76rem;
+      color: #0f172a;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+    }
+
+    .verify-info span {
+      display: block;
+      font-size: 0.66rem;
+      color: #475569;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    .verify-tag {
+      display: inline-block;
+      background: #dcfce7;
+      color: #15803d;
+      font-size: 0.56rem;
+      font-weight: 900;
+      padding: 2px 7px;
+      border-radius: 10px;
+      margin-top: 4px;
+      letter-spacing: 0.08em;
+    }
+
+    /* Status stamp */
+    .status-stamp {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.2rem;
+      border-radius: 10px;
+      background: #dcfce7;
+      border: 2.5px solid #15803d;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .stamp-left { display: flex; align-items: center; gap: 10px; }
+
+    .stamp-icon {
+      width: 42px; height: 42px;
+      background: #15803d;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .stamp-text strong {
+      display: block;
+      font-size: 0.98rem;
+      font-weight: 900;
+      color: #065f46;
+      letter-spacing: 0.06em;
+    }
+
+    .stamp-text span {
+      display: block;
+      font-size: 0.68rem;
+      color: #15803d;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    .stamp-right {
+      text-align: right;
+      font-size: 0.66rem;
+      color: #065f46;
+      font-weight: 600;
+    }
+
+    .stamp-right strong {
+      color: #0f172a;
+      font-size: 0.75rem;
+      display: block;
+      font-family: 'Courier New', monospace;
+      margin-top: 2px;
+    }
+
+    .slip-note {
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      background: #fef3d6;
+      border-left: 3px solid #f59e0b;
+      border-radius: 8px;
+      font-size: 0.72rem;
+      color: #92400e;
+      font-weight: 600;
+      line-height: 1.5;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .slip-note i { margin-top: 2px; flex-shrink: 0; }
+
+    .bottom-strip {
+      padding: 0.65rem 2rem;
+      background: #1e3a8a;
+      color: #bae6fd;
+      font-size: 0.62rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      position: relative;
+      z-index: 2;
+    }
+
+    .bottom-strip span { display: flex; align-items: center; gap: 5px; }
+
+    .toast-alert {
+      position: fixed;
+      top: 90px; right: 20px;
+      z-index: 200;
+      padding: 0.85rem 1.2rem;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      box-shadow: 0 12px 30px -10px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      max-width: 360px;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(30px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @media (max-width: 700px) {
+      body { padding: 1rem; }
+      .slip-wrapper { margin-top: 60px; }
+      .slip-header { padding: 1.2rem 1.3rem 0.9rem; }
+      .college-logo { width: 48px; height: 48px; font-size: 1.4rem; }
+      .college-text h1 { font-size: 0.95rem; }
+      .id-box .perm-id { font-size: 0.8rem; }
+      .slip-body { padding: 1.2rem 1.3rem; }
+      .slip-grid { grid-template-columns: 1fr; gap: 1.3rem; text-align: center; }
+      .student-photo { width: 110px; height: 130px; }
+      #qrcode { width: 140px; height: 140px; }
+      .slip-footer { padding: 1rem 1.3rem; }
+      .verify-grid { grid-template-columns: 1fr; }
+      .action-bar { padding: 0.65rem 1rem; }
+      .btn-action { padding: 0.45rem 0.8rem; font-size: 0.7rem; }
+      .details-side .detail-row { grid-template-columns: 1fr; gap: 2px; }
+    }
+
+    @media (max-width: 450px) {
+      .btn-action span { display: none; }
+      .btn-action { padding: 0.5rem 0.65rem; }
+    }
+
+    /* PRINT */
+    @media print {
+      body { background: white !important; padding: 0; display: block; }
+      .action-bar, .toast-alert { display: none !important; }
+      .slip-wrapper { margin: 0; max-width: 100%; }
+      .permission-slip {
+        box-shadow: none;
+        border: 1.5px solid #0f172a;
+        border-radius: 0;
+        page-break-inside: avoid;
+      }
+      .permission-slip::before { opacity: 0.05; }
+      @page { margin: 1cm; size: A4; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Action Bar -->
+  <div class="action-bar">
+    <div class="action-bar-left">
+      <i class="fas fa-ticket-alt"></i>
+      <div>
+        <strong>Digital Permission Slip</strong>
+        <span id="slipStatusText">Loading...</span>
+      </div>
+    </div>
+    <div class="action-buttons">
+      <button class="btn-action outline" onclick="goBack()"><i class="fas fa-arrow-left"></i> <span>Back</span></button>
+      <button class="btn-action primary" id="downloadBtn" onclick="downloadSlip()"><i class="fas fa-download"></i> <span>Download</span></button>
+      <button class="btn-action outline" id="printBtn" onclick="printSlip()"><i class="fas fa-print"></i> <span>Print</span></button>
+      <button class="btn-action outline" id="shareBtn" onclick="shareSlip()"><i class="fas fa-share"></i> <span>Share</span></button>
+    </div>
+  </div>
+
+  <!-- Slip Wrapper (content injected by JS) -->
+  <div class="slip-wrapper" id="slipWrapper">
+    <!-- Rendered by JS: either locked-card or permission-slip -->
+  </div>
+
+  <script>
+    let currentPermission = null;
+    let currentStudent = null;
+
+    // ✅ Only these statuses can view the slip
+    const VIEWABLE_STATUSES = ['hod_approved', 'approved', 'out', 'returned'];
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const session = localStorage.getItem('cps_currentUser');
+      const sessionActive = localStorage.getItem('cps_sessionActive');
+
+      // ✅ Session check
+      if (!session || sessionActive !== 'true') {
+        localStorage.removeItem('cps_currentUser');
+        localStorage.removeItem('cps_sessionActive');
+        window.location.replace('../index.html');
+        return;
+      }
+      const user = JSON.parse(session);
+      if (user.role !== 'student') { window.location.replace('../index.html'); return; }
+      currentStudent = user;
+      loadSlip();
+    });
+
+    function loadSlip() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const requestedId = urlParams.get('id');
+      const allPermissions = JSON.parse(localStorage.getItem('cps_permissions') || '[]');
+      const myPermissions = allPermissions.filter(p => p.regNo === currentStudent.regNo);
+
+      let permission = null;
+      if (requestedId) {
+        permission = myPermissions.find(p => p.permissionId === requestedId);
+      }
+      // Fallback: latest HOD-approved
+      if (!permission) {
+        permission = myPermissions
+          .filter(p => VIEWABLE_STATUSES.includes(p.status))
+          .sort((a, b) => new Date(b.hodApprovedAt || 0) - new Date(a.hodApprovedAt || 0))[0];
+      }
+
+      if (!permission) {
+        renderNotFound();
+        return;
+      }
+
+      currentPermission = permission;
+
+      // ✅ GATE: Only HOD-approved slips can be rendered
+      if (!VIEWABLE_STATUSES.includes(permission.status)) {
+        renderLocked(permission);
+        return;
+      }
+
+      renderSlip(permission);
+      generateQR(permission.permissionId);
+    }
+
+    // ============================================================
+    // LOCKED VIEW (not HOD approved yet)
+    // ============================================================
+    function renderLocked(p) {
+      // Disable download/print/share
+      document.getElementById('downloadBtn').disabled = true;
+      document.getElementById('printBtn').disabled = true;
+      document.getElementById('shareBtn').disabled = true;
+      document.getElementById('slipStatusText').textContent = `${p.permissionId} · Awaiting HOD approval`;
+
+      const statusInfo = getStatusInfo(p.status);
+      const steps = getLockedSteps(p.status);
+
+      document.getElementById('slipWrapper').innerHTML = `
+        <div class="locked-card">
+          <div class="locked-icon"><i class="fas fa-lock"></i></div>
+          <h2>Slip Not Available Yet</h2>
+          <p>
+            Your permission slip will be generated only after <strong>HOD approval</strong>.
+            Currently, this request is at the teacher verification stage.
+          </p>
+
+          <div class="status-badge ${statusInfo.cls}">${statusInfo.text}</div>
+
+          <div class="progress-flow">
+            ${steps}
+          </div>
+
+          <div style="background:#f1f5f9; border-radius:10px; padding:0.9rem 1.1rem; font-size:0.78rem; color:#475569; text-align:left; margin-bottom:1.3rem;">
+            <div style="font-weight:700; color:#1e293b; margin-bottom:5px;"><i class="fas fa-info-circle"></i> Permission ID</div>
+            <div style="font-family:'Courier New', monospace; font-weight:800; color:#1e3a8a; font-size:0.9rem;">${escapeHtml(p.permissionId)}</div>
+            <div style="margin-top:8px;"><strong>Reason:</strong> ${escapeHtml(p.reason || '--')}</div>
+            <div style="margin-top:4px;"><strong>Submitted:</strong> ${formatDateTime(p.submittedAt)}</div>
+          </div>
+
+          <button class="btn-back" onclick="goBack()">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+          </button>
+        </div>
+      `;
+    }
+
+    function getLockedSteps(status) {
+      const stepDefs = [
+        { key: 'requested', label: 'Requested' },
+        { key: 'teacher', label: 'Teacher' },
+        { key: 'hod', label: 'HOD' }
+      ];
+
+      const teacherDone = ['teacher_verified', 'pending_hod_approval', 'hod_approved', 'approved', 'out', 'returned'].includes(status);
+      const hodDone = ['hod_approved', 'approved', 'out', 'returned'].includes(status);
+
+      return stepDefs.map((s, i) => {
+        let cls = '';
+        if (s.key === 'requested') cls = 'done';
+        if (s.key === 'teacher') cls = teacherDone ? 'done' : 'current';
+        if (s.key === 'hod') cls = hodDone ? 'done' : (teacherDone ? 'current' : '');
+        return `
+          <div class="flow-step">
+            <div class="flow-circle ${cls}">
+              ${cls === 'done' ? '<i class="fas fa-check"></i>' : (cls === 'current' ? '<i class="fas fa-ellipsis-h"></i>' : i + 1)}
+            </div>
+            <div class="flow-label">${s.label}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderNotFound() {
+      document.getElementById('downloadBtn').disabled = true;
+      document.getElementById('printBtn').disabled = true;
+      document.getElementById('shareBtn').disabled = true;
+      document.getElementById('slipStatusText').textContent = 'No slip found';
+
+      document.getElementById('slipWrapper').innerHTML = `
+        <div class="locked-card">
+          <div class="locked-icon" style="background:linear-gradient(135deg,#dc2626,#991b1b);">
+            <i class="fas fa-exclamation-triangle"></i>
+          </div>
+          <h2>No Permission Slip Found</h2>
+          <p>
+            No approved permission request found for your account.
+            Submit a permission request and wait for teacher + HOD approval.
+          </p>
+          <button class="btn-back" onclick="goBack()">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+          </button>
+        </div>
+      `;
+    }
+
+    function getStatusInfo(status) {
+      switch (status) {
+        case 'pending_teacher_verification': return { cls: 'pending', text: 'Pending Teacher' };
+        case 'teacher_verified': return { cls: 'pending', text: 'Pending HOD' };
+        case 'pending_hod_approval': return { cls: 'pending', text: 'Pending HOD' };
+        case 'teacher_rejected': return { cls: 'rejected', text: 'Rejected by Teacher' };
+        case 'hod_rejected': return { cls: 'rejected', text: 'Rejected by HOD' };
+        case 'hod_approved': return { cls: 'pending', text: 'Approved' };
+        case 'approved': return { cls: 'pending', text: 'Approved' };
+        case 'out': return { cls: 'pending', text: 'OUT' };
+        case 'returned': return { cls: 'pending', text: 'Returned' };
+        case 'expired': return { cls: 'expired', text: 'Expired' };
+        case 'cancelled': return { cls: 'expired', text: 'Cancelled' };
+        default: return { cls: 'pending', text: 'Pending' };
+      }
+    }
+
+    // ============================================================
+    // RENDER FULL SLIP (only HOD approved)
+    // ============================================================
+    function renderSlip(p) {
+      document.getElementById('downloadBtn').disabled = false;
+      document.getElementById('printBtn').disabled = false;
+      document.getElementById('shareBtn').disabled = false;
+      document.getElementById('slipStatusText').textContent = `${p.permissionId} · ${p.fullName || ''}`;
+
+      const initials = (p.fullName || 'S').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+      const photoHTML = p.photo
+        ? `<img src="${p.photo}" alt="Student Photo">`
+        : `<span>${initials}</span>`;
+
+      document.getElementById('slipWrapper').innerHTML = `
+        <div class="permission-slip" id="permissionSlip">
+          <!-- HEADER -->
+          <div class="slip-header">
+            <div class="header-top">
+              <div class="college-info">
+                <div class="college-logo"><i class="fas fa-graduation-cap"></i></div>
+                <div class="college-text">
+                  <h1>BVCITS · College Permission</h1>
+                  <div class="sub">Official Digital Permission Slip</div>
+                </div>
+              </div>
+              <div class="id-box">
+                <label>Permission ID</label>
+                <div class="perm-id" id="permIdDisplay">${escapeHtml(p.permissionId || '--')}</div>
+              </div>
+            </div>
+            <div class="slip-title">Authorized Campus Exit Pass</div>
+          </div>
+
+          <!-- BODY -->
+          <div class="slip-body">
+            <div class="slip-grid">
+              <div class="student-photo-box">
+                <div class="student-photo" id="studentPhotoDisplay">
+                  ${photoHTML}
+                </div>
+                <div class="photo-label">Student Photo</div>
+              </div>
+
+              <div class="details-side">
+                <div class="detail-row">
+                  <span class="label">Student Name</span>
+                  <span class="value">${escapeHtml(p.fullName || '--')}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Register No</span>
+                  <span class="value">${escapeHtml(p.regNo || '--')}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Branch · Section</span>
+                  <span class="value">${escapeHtml(p.branch || '--')} · ${escapeHtml(p.section || 'No Section')}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Reason</span>
+                  <span class="value">${escapeHtml(p.reason || p.type || '--')}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Destination</span>
+                  <span class="value">${escapeHtml(p.destination || '--')}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Date</span>
+                  <span class="value">${formatDate(p.date || p.submittedAt)}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Out Time</span>
+                  <span class="value">${formatTime(p.outTime)}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Return Time</span>
+                  <span class="value">${formatTime(p.returnTime)}</span>
+                </div>
+              </div>
+
+              <div class="qr-side">
+                <div class="qr-frame">
+                  <div id="qrcode"></div>
+                </div>
+                <div class="qr-label">Scan at Gate</div>
+                <div class="qr-id-text">${escapeHtml(p.permissionId || '--')}</div>
+                <div class="qr-hint">Security verifies here</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- FOOTER -->
+          <div class="slip-footer">
+            <div class="verify-grid">
+              <div class="verify-card">
+                <div class="verify-check"><i class="fas fa-check"></i></div>
+                <div class="verify-info">
+                  <strong>Class Teacher</strong>
+                  <span>${escapeHtml(p.teacherName || p.verifiedBy || 'Verified')}</span>
+                  <span class="verify-tag">✓ VERIFIED</span>
+                </div>
+              </div>
+              <div class="verify-card">
+                <div class="verify-check"><i class="fas fa-check"></i></div>
+                <div class="verify-info">
+                  <strong>HOD Approval</strong>
+                  <span>${escapeHtml(p.hodApprovedBy || 'Approved')}</span>
+                  <span class="verify-tag">✓ APPROVED</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="status-stamp">
+              <div class="stamp-left">
+                <div class="stamp-icon"><i class="fas fa-shield-alt"></i></div>
+                <div class="stamp-text">
+                  <strong>✓ APPROVED · VALID</strong>
+                  <span>Authorized for campus exit</span>
+                </div>
+              </div>
+              <div class="stamp-right">
+                <span>Issued At</span>
+                <strong>${formatDateTime(p.hodApprovedAt)}</strong>
+              </div>
+            </div>
+
+            <div class="slip-note">
+              <i class="fas fa-exclamation-circle"></i>
+              <span>Show this slip at the college gate. Valid only for the mentioned date & time. Expired slips will be rejected by security.</span>
+            </div>
+          </div>
+
+          <div class="bottom-strip">
+            <span><i class="fas fa-qrcode"></i> QR-ENABLED SLIP</span>
+            <span><i class="fas fa-lock"></i> TEACHER + HOD VERIFIED</span>
+            <span><i class="fas fa-clock"></i> AUTO-EXPIRES</span>
+          </div>
+        </div>
+      `;
+    }
+
+    function generateQR(permissionId) {
+      const qrContainer = document.getElementById('qrcode');
+      if (!qrContainer) return;
+      qrContainer.innerHTML = '';
+      const qrData = JSON.stringify({
+        id: permissionId,
+        type: 'permission_slip',
+        verify: `https://bvcits.edu.in/verify/${permissionId}`,
+        issued: new Date().toISOString()
+      });
+      try {
+        new QRCode(qrContainer, {
+          text: qrData,
+          width: 145,
+          height: 145,
+          colorDark: '#1e3a8a',
+          colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.H
+        });
+      } catch (e) {
+        qrContainer.innerHTML = '<i class="fas fa-qrcode" style="font-size:4rem; color:#1e3a8a;"></i>';
+      }
+    }
+
+    async function downloadSlip() {
+      if (!currentPermission || !VIEWABLE_STATUSES.includes(currentPermission.status)) {
+        showToast('Slip not available yet.', 'error');
+        return;
+      }
+      showToast('Preparing download...', 'info');
+      try {
+        const slipElement = document.getElementById('permissionSlip');
+        if (!slipElement) { showToast('Slip not rendered.', 'error'); return; }
+        const canvas = await html2canvas(slipElement, {
+          scale: 2,
+          backgroundColor: '#ffffff',
+          useCORS: true,
+          logging: false
+        });
+        canvas.toBlob((blob) => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `Permission-Slip-${currentPermission.permissionId}.png`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          showToast('✅ Downloaded as PNG!', 'success');
+        }, 'image/png');
+      } catch (e) {
+        showToast('Download failed. Use Print.', 'error');
+      }
+    }
+
+    function printSlip() {
+      if (!currentPermission || !VIEWABLE_STATUSES.includes(currentPermission.status)) {
+        showToast('Slip not available yet.', 'error');
+        return;
+      }
+      showToast('Opening print dialog...', 'info');
+      setTimeout(() => window.print(), 400);
+    }
+
+    async function shareSlip() {
+      if (!currentPermission || !VIEWABLE_STATUSES.includes(currentPermission.status)) {
+        showToast('Slip not available yet.', 'error');
+        return;
+      }
+      const shareData = {
+        title: 'College Permission Slip',
+        text: `Permission ID: ${currentPermission.permissionId}\nStudent: ${currentPermission.fullName}\nReason: ${currentPermission.reason}\nDate: ${formatDate(currentPermission.date)}\nOut Time: ${formatTime(currentPermission.outTime)}`,
+        url: window.location.href
+      };
+      if (navigator.share) {
+        try { await navigator.share(shareData); showToast('✅ Slip shared!', 'success'); }
+        catch (e) { if (e.name !== 'AbortError') fallbackShare(shareData); }
+      } else { fallbackShare(shareData); }
+    }
+
+    function fallbackShare(shareData) {
+      const text = shareData.text + '\n' + shareData.url;
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('📋 Details copied to clipboard!', 'success');
+      }).catch(() => showToast('Sharing not available.', 'info'));
+    }
+
+    function goBack() { window.location.href = 'dashboard.html'; }
+
+    function formatDate(iso) {
+      if (!iso) return '--';
+      try { return new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); }
+      catch (e) { return iso; }
+    }
+
+    function formatDateTime(iso) {
+      if (!iso) return '--';
+      try { return new Date(iso).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+      catch (e) { return iso; }
+    }
+
+    function formatTime(time24) {
+      if (!time24) return '--';
+      try {
+        const [h, m] = time24.split(':');
+        const hour = parseInt(h);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const h12 = hour % 12 || 12;
+        return `${h12}:${m} ${ampm}`;
+      } catch (e) { return time24; }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+    function showToast(message, type = 'info') {
+      const colors = {
+        success: { bg: '#dcfce7', color: '#166534', border: '#bbf7d0', icon: 'fa-check-circle' },
+        error: { bg: '#fee2e2', color: '#991b1b', border: '#fecaca', icon: 'fa-exclamation-circle' },
+        info: { bg: '#dbeafe', color: '#1e40af', border: '#bfdbfe', icon: 'fa-info-circle' }
+      };
+      const c = colors[type] || colors.info;
+      const existing = document.querySelector('.toast-alert');
+      if (existing) existing.remove();
+      const toast = document.createElement('div');
+      toast.className = 'toast-alert';
+      toast.style.background = c.bg;
+      toast.style.color = c.color;
+      toast.style.border = '1px solid ' + c.border;
+      toast.innerHTML = `<i class="fas ${c.icon}"></i> <span>${message}</span>`;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.style.transition = '0.3s';
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(30px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+  </script>
+</body>
+</html>

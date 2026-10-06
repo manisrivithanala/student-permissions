@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HOD Dashboard | College Permission</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+  <script type="module" src="../firebase-boot.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: #ecfdf5; min-height: 100vh; color: #064e3b; display: flex; }
+
+    /* SIDEBAR */
+    .sidebar { width: 255px; background: linear-gradient(180deg, #064e3b 0%, #065f46 60%, #0f766e 100%); color: #d1fae5; min-height: 100vh; padding: 1.4rem 1rem; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; flex-shrink: 0; }
+    .sidebar-brand { display: flex; align-items: center; gap: 10px; padding-bottom: 1.2rem; margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .sidebar-brand .logo { width: 42px; height: 42px; background: rgba(255,255,255,0.15); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #6ee7b7; }
+    .sidebar-brand h2 { font-size: 0.98rem; font-weight: 700; color: #ecfdf5; }
+    .sidebar-brand span { font-size: 0.65rem; color: #6ee7b7; display: block; font-weight: 500; }
+    .nav-menu { list-style: none; display: flex; flex-direction: column; gap: 0.15rem; flex: 1; }
+    .nav-menu a { display: flex; align-items: center; gap: 11px; padding: 0.6rem 0.85rem; border-radius: 10px; color: #a7f3d0; text-decoration: none; font-size: 0.82rem; font-weight: 500; cursor: pointer; transition: 0.15s; }
+    .nav-menu a i { width: 17px; font-size: 0.88rem; text-align: center; }
+    .nav-menu a:hover { background: rgba(255,255,255,0.1); color: white; }
+    .nav-menu a.active { background: #ffffff; color: #065f46; font-weight: 700; }
+    .nav-section { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.1em; color: #6ee7b7; padding: 0.9rem 0.85rem 0.35rem; font-weight: 700; }
+    .nav-badge { margin-left: auto; background: #fbbf24; color: #064e3b; font-size: 0.62rem; font-weight: 800; padding: 2px 7px; border-radius: 20px; min-width: 20px; text-align: center; }
+    .logout-item { margin-top: auto; padding-top: 0.8rem; border-top: 1px solid rgba(255,255,255,0.1); }
+    .logout-item a { color: #fca5a5; }
+
+    /* MAIN */
+    .main-content { flex: 1; padding: 1.6rem 2rem; overflow-y: auto; max-width: calc(100% - 255px); }
+    .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.6rem; flex-wrap: wrap; gap: 1rem; }
+    .topbar .page-title h1 { font-size: 1.4rem; font-weight: 700; color: #065f46; letter-spacing: -0.02em; }
+    .topbar .page-title p { font-size: 0.8rem; color: #047857; margin-top: 3px; }
+    .topbar-right { display: flex; align-items: center; gap: 0.7rem; }
+
+    /* ⭐ Live update pill */
+    .live-pill {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+      padding: 0.3rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      animation: pulsePill 1.4s ease-in-out infinite;
+    }
+    .live-pill.show { display: inline-flex; }
+    .live-pill .live-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #15803d;
+      animation: pulseDot 1.4s ease-in-out infinite;
+    }
+    @keyframes pulsePill {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.65; }
+    }
+    @keyframes pulseDot {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 #15803d80; }
+      50% { transform: scale(1.15); box-shadow: 0 0 0 6px #15803d00; }
+    }
+    @keyframes flashUpdate {
+      0% { background: #fef3c7; transform: scale(1.1); }
+      100% { background: transparent; transform: scale(1); }
+    }
+    .flash-update { animation: flashUpdate 1.2s ease; border-radius: 6px; }
+
+    .user-chip { display: flex; align-items: center; gap: 9px; background: white; padding: 0.35rem 0.9rem 0.35rem 0.45rem; border-radius: 40px; border: 1px solid #a7f3d0; }
+    .user-chip .avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #047857); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem; font-weight: 700; }
+    .user-chip .user-info strong { font-size: 0.76rem; display: block; color: #065f46; }
+    .user-chip .user-info span { font-size: 0.64rem; color: #059669; }
+
+    /* SECTION SWITCHING */
+    .section-view { display: none; animation: fadeIn 0.25s ease; }
+    .section-view.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* STATS */
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1.6rem; }
+    .stat-card { background: white; border-radius: 1.2rem; padding: 1rem 1.15rem; border: 1px solid #d1fae5; box-shadow: 0 6px 20px -10px #10b98130; display: flex; align-items: center; gap: 0.9rem; }
+    .stat-icon { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; flex-shrink: 0; }
+    .stat-icon.pending { background: #fef3c7; color: #b45309; }
+    .stat-icon.approved { background: #d1fae5; color: #047857; }
+    .stat-icon.rejected { background: #fee2e2; color: #b91c1c; }
+    .stat-icon.total { background: #ccfbf1; color: #0f766e; }
+    .stat-icon.today { background: #ede9fe; color: #6d28d9; }
+    .stat-icon.emergency { background: #fee2e2; color: #dc2626; }
+    .stat-info h3 { font-size: 1.4rem; font-weight: 800; color: #065f46; line-height: 1; }
+    .stat-info p { font-size: 0.66rem; color: #059669; font-weight: 600; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.03em; }
+
+    /* CARD */
+    .card { background: white; border-radius: 1.4rem; padding: 1.4rem 1.5rem; border: 1px solid #d1fae5; box-shadow: 0 8px 24px -14px #10b98130; margin-bottom: 1.4rem; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.8rem; margin-bottom: 1.1rem; padding-bottom: 0.9rem; border-bottom: 1px solid #ecfdf5; }
+    .card-header h2 { font-size: 1.02rem; font-weight: 700; color: #065f46; display: flex; align-items: center; gap: 9px; }
+    .card-header h2 i { color: #10b981; }
+    .subtitle { font-size: 0.75rem; color: #059669; font-weight: 500; }
+
+    /* FILTERS */
+    .filters { display: flex; gap: 0.65rem; flex-wrap: wrap; margin-bottom: 1rem; align-items: center; }
+    .filter-select, .search-box input { padding: 0.55rem 0.9rem; border: 1.5px solid #a7f3d0; border-radius: 10px; font-family: inherit; font-size: 0.78rem; color: #065f46; background: #f0fdf4; outline: none; cursor: pointer; }
+    .filter-select:focus, .search-box input:focus { border-color: #10b981; box-shadow: 0 0 0 3px #10b98120; }
+    .search-box { flex: 1; min-width: 180px; position: relative; }
+    .search-box i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #6ee7b7; font-size: 0.82rem; pointer-events: none; }
+    .search-box input { width: 100%; padding-left: 2.2rem; cursor: text; }
+    .btn-clear-filters { padding: 0.55rem 0.9rem; border: 1.5px solid #fecaca; background: #fef2f2; color: #b91c1c; border-radius: 10px; font-family: inherit; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: 0.15s; }
+    .btn-clear-filters:hover { background: #fee2e2; }
+    .filter-chip-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+    .filter-chip { background: #d1fae5; color: #065f46; padding: 0.3rem 0.75rem; border-radius: 20px; font-size: 0.7rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+    .filter-chip i { cursor: pointer; color: #059669; }
+
+    /* TABLE */
+    .table-wrapper { overflow-x: auto; border-radius: 12px; border: 1px solid #ecfdf5; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    table thead th { text-align: left; padding: 0.7rem 0.85rem; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: #059669; font-weight: 700; background: #f0fdf4; border-bottom: 1px solid #d1fae5; white-space: nowrap; }
+    table tbody td { padding: 0.8rem 0.85rem; border-bottom: 1px solid #f0fdf4; color: #065f46; font-weight: 500; vertical-align: middle; }
+    table tbody tr:hover { background: #f0fdf4; }
+
+    .table-avatar { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #047857); color: white; display: inline-flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; margin-right: 8px; vertical-align: middle; overflow: hidden; flex-shrink: 0; }
+    .table-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .table-name { display: inline-block; vertical-align: middle; font-weight: 600; color: #065f46; }
+    .table-name small { display: block; font-weight: 500; color: #6ee7b7; font-size: 0.66rem; margin-top: 2px; }
+
+    .pill { padding: 0.25rem 0.7rem; border-radius: 40px; font-size: 0.65rem; font-weight: 700; display: inline-block; }
+    .pill.branch { background: #ccfbf1; color: #0f766e; }
+    .pill.section { background: #dbeafe; color: #1e40af; }
+    .pill.year { background: #fce7f3; color: #be185d; }
+    .pill.pending { background: #fef3c7; color: #b45309; }
+    .pill.approved { background: #d1fae5; color: #047857; }
+    .pill.rejected { background: #fee2e2; color: #b91c1c; }
+
+    .teacher-verified-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 0.35rem 0.7rem; border-radius: 10px;
+      background: #dcfce7; border: 1px solid #bbf7d0;
+      font-size: 0.68rem; font-weight: 700; color: #15803d;
+    }
+    .teacher-verified-badge i { font-size: 0.75rem; }
+    .teacher-verified-badge small { display: block; font-weight: 500; color: #047857; font-size: 0.6rem; }
+
+    /* BUTTONS */
+    .btn { padding: 0.5rem 1rem; border-radius: 9px; font-size: 0.76rem; font-weight: 700; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 6px; transition: 0.15s; font-family: inherit; }
+    .btn-primary { background: linear-gradient(135deg, #10b981, #047857); color: white; box-shadow: 0 6px 16px -6px #10b98180; }
+    .btn-primary:hover { transform: translateY(-2px); }
+    .btn-success { background: #d1fae5; color: #047857; border: 1.5px solid #a7f3d0; }
+    .btn-danger { background: #fee2e2; color: #b91c1c; border: 1.5px solid #fecaca; }
+    .btn-outline { background: white; color: #047857; border: 1.5px solid #a7f3d0; }
+    .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.68rem; }
+
+    .table-actions { display: flex; gap: 5px; }
+    .icon-btn { width: 32px; height: 32px; border-radius: 8px; border: 1px solid #a7f3d0; background: white; color: #047857; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem; transition: 0.15s; }
+    .icon-btn:hover { background: #f0fdf4; }
+    .icon-btn.success { color: #15803d; border-color: #bbf7d0; background: #f0fdf4; }
+    .icon-btn.danger { color: #dc2626; border-color: #fecaca; background: #fef2f2; }
+
+    .empty-state { text-align: center; padding: 3rem 1rem; color: #6ee7b7; }
+    .empty-state i { font-size: 2.6rem; color: #a7f3d0; margin-bottom: 0.8rem; display: block; }
+    .empty-state h3 { font-size: 1rem; color: #047857; font-weight: 700; }
+
+    /* MODAL */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(6,78,59,0.7); backdrop-filter: blur(6px); display: none; align-items: center; justify-content: center; z-index: 100; padding: 1rem; }
+    .modal-overlay.show { display: flex; }
+    .modal { background: white; border-radius: 1.6rem; padding: 2rem; max-width: 760px; width: 100%; max-height: 92vh; overflow-y: auto; box-shadow: 0 30px 70px -20px #064e3b90; animation: modalIn 0.28s ease; }
+    @keyframes modalIn { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
+    .modal h3 { font-size: 1.2rem; font-weight: 700; color: #065f46; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 10px; }
+    .modal h3 i { color: #10b981; }
+    .modal .modal-sub { font-size: 0.82rem; color: #059669; margin-bottom: 1.4rem; }
+
+    .profile-header { display: flex; gap: 1.2rem; align-items: center; padding: 1rem 1.2rem; background: linear-gradient(135deg, #f0fdf4 0%, #d1fae5 100%); border-radius: 14px; margin-bottom: 1.3rem; }
+    .profile-avatar-lg { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #047857); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.8rem; font-weight: 800; overflow: hidden; flex-shrink: 0; box-shadow: 0 8px 24px -8px #10b98180; }
+    .profile-avatar-lg img { width: 100%; height: 100%; object-fit: cover; }
+    .profile-main h4 { font-size: 1.15rem; font-weight: 800; color: #065f46; }
+    .profile-main p { font-size: 0.78rem; color: #047857; margin-top: 4px; font-weight: 600; }
+
+    .info-block { background: #f0fdf4; border: 1.5px solid #d1fae5; border-radius: 12px; padding: 1rem 1.15rem; margin-bottom: 1.1rem; }
+    .info-block h4 { font-size: 0.78rem; font-weight: 700; color: #047857; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.7rem; display: flex; align-items: center; gap: 7px; }
+    .info-block h4 i { font-size: 0.85rem; }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.55rem; }
+    .detail-item { font-size: 0.8rem; padding: 0.35rem 0; }
+    .detail-item label { font-size: 0.66rem; text-transform: uppercase; color: #059669; font-weight: 700; display: block; }
+    .detail-item span { font-weight: 600; color: #065f46; word-break: break-word; }
+
+    .teacher-box { background: #dcfce7; border: 2px solid #bbf7d0; border-radius: 12px; padding: 1.1rem 1.2rem; margin-bottom: 1.2rem; }
+    .teacher-box h4 { font-size: 0.85rem; font-weight: 800; color: #15803d; margin-bottom: 0.8rem; display: flex; align-items: center; gap: 8px; }
+    .teacher-check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+    .teacher-check-item { background: white; border-radius: 10px; padding: 0.6rem 0.85rem; }
+    .teacher-check-item label { font-size: 0.62rem; text-transform: uppercase; color: #059669; font-weight: 700; display: block; margin-bottom: 3px; }
+    .teacher-check-item span { font-size: 0.82rem; font-weight: 700; color: #065f46; }
+    .teacher-check-item span.ok { color: #15803d; }
+
+    .remarks-box { width: 100%; padding: 0.6rem 0.8rem; border: 1.5px solid #a7f3d0; border-radius: 9px; font-family: inherit; font-size: 0.8rem; color: #065f46; background: white; outline: none; resize: vertical; min-height: 55px; }
+
+    .modal-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 1rem; }
+    .modal-actions .btn { flex: 1; justify-content: center; }
+
+    .toast-alert { position: fixed; top: 20px; right: 20px; z-index: 200; padding: 0.85rem 1.2rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600; box-shadow: 0 12px 30px -10px rgba(0,0,0,0.25); display: flex; align-items: center; gap: 9px; max-width: 380px; animation: slideIn 0.3s ease; }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+
+    .export-bar { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1rem; }
+
+    /* Analytics */
+    .analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.2rem; }
+    .analytics-grid.three { grid-template-columns: repeat(3, 1fr); }
+    @media (max-width: 900px) { .analytics-grid, .analytics-grid.three { grid-template-columns: 1fr; } }
+
+    .analytics-block {
+      background: #f0fdf4; border: 1.5px solid #d1fae5;
+      border-radius: 14px; padding: 1.1rem 1.2rem;
+    }
+    .analytics-block h3 {
+      font-size: 0.82rem; font-weight: 800; color: #065f46;
+      margin-bottom: 0.9rem; display: flex; align-items: center; gap: 7px;
+    }
+    .bar-row {
+      display: grid; grid-template-columns: 110px 1fr 45px;
+      align-items: center; gap: 10px; margin-bottom: 0.6rem;
+    }
+    .bar-row .bar-label { font-size: 0.75rem; font-weight: 700; color: #065f46; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bar-row .bar-track { height: 22px; background: #d1fae5; border-radius: 8px; overflow: hidden; }
+    .bar-row .bar-fill {
+      height: 100%; background: linear-gradient(90deg, #10b981, #047857);
+      border-radius: 8px; transition: width 0.4s ease;
+      display: flex; align-items: center; padding-left: 8px;
+      color: white; font-size: 0.66rem; font-weight: 800; min-width: 28px;
+    }
+    .bar-row .bar-value { font-size: 0.82rem; font-weight: 800; color: #065f46; text-align: right; }
+
+    /* Ring */
+    .summary-ring { display: flex; align-items: center; gap: 1.2rem; flex-wrap: wrap; }
+    .ring-visual {
+      width: 120px; height: 120px; border-radius: 50%;
+      background: conic-gradient(#15803d 0 var(--approved-deg, 0deg),
+                                  #b45309 var(--approved-deg, 0deg) var(--pending-deg, 0deg),
+                                  #b91c1c var(--pending-deg, 0deg) 360deg);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      position: relative; box-shadow: 0 8px 20px -8px #10b98140;
+    }
+    .ring-visual::after { content: ''; position: absolute; inset: 20px; background: white; border-radius: 50%; }
+    .ring-center { position: relative; z-index: 1; text-align: center; }
+    .ring-center strong { display: block; font-size: 1.4rem; font-weight: 900; color: #065f46; line-height: 1; }
+    .ring-center span { font-size: 0.58rem; text-transform: uppercase; font-weight: 700; color: #059669; letter-spacing: 0.05em; }
+    .ring-legend { display: flex; flex-direction: column; gap: 0.55rem; }
+    .ring-legend .legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; font-weight: 600; color: #065f46; }
+    .ring-legend .dot { width: 12px; height: 12px; border-radius: 4px; flex-shrink: 0; }
+    .dot.green { background: #15803d; }
+    .dot.orange { background: #b45309; }
+    .dot.red { background: #b91c1c; }
+
+    .heat-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+      gap: 0.65rem;
+    }
+    .heat-card {
+      background: white; border-radius: 10px; padding: 0.75rem 0.85rem;
+      border: 1.5px solid #d1fae5; text-align: center;
+    }
+    .heat-card .heat-label { font-size: 0.65rem; font-weight: 700; color: #059669; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 5px; }
+    .heat-card .heat-value { font-size: 1.3rem; font-weight: 900; color: #065f46; line-height: 1; }
+    .heat-card .heat-sub { font-size: 0.6rem; color: #6ee7b7; font-weight: 600; margin-top: 3px; }
+
+    .approval-rate-visual {
+      display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;
+    }
+    .approval-rate-visual .big-num {
+      font-size: 2.8rem; font-weight: 900; color: #10b981; line-height: 1;
+    }
+    .approval-rate-visual .rate-bar {
+      flex: 1; min-width: 200px;
+    }
+    .rate-track { height: 16px; background: #d1fae5; border-radius: 10px; overflow: hidden; }
+    .rate-fill {
+      height: 100%; background: linear-gradient(90deg, #10b981, #047857);
+      border-radius: 10px; transition: width 0.5s;
+    }
+
+    @media (max-width: 900px) {
+      .sidebar { width: 70px; padding: 1rem 0.4rem; align-items: center; }
+      .sidebar-brand h2, .sidebar-brand span, .nav-menu a span, .nav-section, .nav-badge { display: none; }
+      .sidebar-brand .logo { margin: 0 auto; }
+      .nav-menu a { justify-content: center; padding: 0.65rem 0.5rem; }
+      .main-content { max-width: calc(100% - 70px); padding: 1.3rem 1.1rem; }
+    }
+    @media (max-width: 600px) {
+      .main-content { padding: 1rem; }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+      .detail-grid { grid-template-columns: 1fr; }
+      .teacher-check-grid { grid-template-columns: 1fr; }
+      .modal-actions .btn { flex: 1 1 100%; }
+      .profile-header { flex-direction: column; text-align: center; }
+      .bar-row { grid-template-columns: 90px 1fr 40px; }
+    }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="logo"><i class="fas fa-user-tie"></i></div>
+      <div>
+        <h2>HOD Portal</h2>
+        <span>Department Head</span>
+      </div>
+    </div>
+    <ul class="nav-menu">
+      <li class="nav-section">Main</li>
+      <li><a class="active" data-section="dashboard" onclick="switchSection('dashboard', this)"><i class="fas fa-home"></i> <span>Dashboard</span></a></li>
+      <li><a data-section="pending" onclick="switchSection('pending', this)"><i class="fas fa-hourglass-half"></i> <span>Pending Approval</span><span class="nav-badge" id="badgePending">0</span></a></li>
+      <li><a data-section="approved" onclick="switchSection('approved', this)"><i class="fas fa-check-circle"></i> <span>Approved</span></a></li>
+      <li><a data-section="rejected" onclick="switchSection('rejected', this)"><i class="fas fa-times-circle"></i> <span>Rejected</span></a></li>
+      <li class="nav-section">Insights</li>
+      <li><a data-section="analytics" onclick="switchSection('analytics', this)"><i class="fas fa-chart-line"></i> <span>Analytics</span></a></li>
+      <li><a data-section="audit" onclick="switchSection('audit', this)"><i class="fas fa-clipboard-list"></i> <span>Audit Trail</span></a></li>
+      <li class="logout-item"><a onclick="logout()"><i class="fas fa-sign-out-alt"></i> <span>Logout</span></a></li>
+    </ul>
+  </aside>
+
+  <main class="main-content">
+    <div class="topbar">
+      <div class="page-title">
+        <h1 id="pageTitle">Dashboard</h1>
+        <p id="pageSubtitle">Welcome to your HOD portal</p>
+      </div>
+      <div class="topbar-right">
+        <span class="live-pill" id="livePill">
+          <span class="live-dot"></span> LIVE
+        </span>
+        <div class="user-chip">
+          <div class="avatar" id="avatarInitials">H</div>
+          <div class="user-info">
+            <strong id="chipName">HOD</strong>
+            <span id="chipDept">--</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-view active" id="section-dashboard">
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-icon total"><i class="fas fa-file-alt"></i></div><div class="stat-info"><h3 id="statTotal">0</h3><p>Total Requests</p></div></div>
+        <div class="stat-card"><div class="stat-icon pending"><i class="fas fa-hourglass-half"></i></div><div class="stat-info"><h3 id="statPending">0</h3><p>Pending Approval</p></div></div>
+        <div class="stat-card"><div class="stat-icon approved"><i class="fas fa-check-circle"></i></div><div class="stat-info"><h3 id="statApproved">0</h3><p>Approved</p></div></div>
+        <div class="stat-card"><div class="stat-icon rejected"><i class="fas fa-times-circle"></i></div><div class="stat-info"><h3 id="statRejected">0</h3><p>Rejected</p></div></div>
+        <div class="stat-card"><div class="stat-icon today"><i class="fas fa-calendar-day"></i></div><div class="stat-info"><h3 id="statToday">0</h3><p>Today</p></div></div>
+        <div class="stat-card"><div class="stat-icon emergency"><i class="fas fa-door-open"></i></div><div class="stat-info"><h3 id="statOut">0</h3><p>Currently Out</p></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h2><i class="fas fa-bolt"></i> Quick Actions</h2></div>
+        <div class="export-bar">
+          <button class="btn btn-primary" onclick="switchSection('pending', document.querySelector('[data-section=pending]'))"><i class="fas fa-hourglass-half"></i> Review Pending</button>
+          <button class="btn btn-outline" onclick="switchSection('analytics', document.querySelector('[data-section=analytics]'))"><i class="fas fa-chart-line"></i> Analytics</button>
+          <button class="btn btn-outline" onclick="exportToCSV()"><i class="fas fa-file-csv"></i> Export All (CSV)</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-view" id="section-pending">
+      <div class="card">
+        <div class="card-header"><h2><i class="fas fa-hourglass-half"></i> Pending Final Approval</h2><span class="subtitle" id="pendingCount">0 requests</span></div>
+
+        <div class="filters">
+          <select class="filter-select" id="filterBranchPending" onchange="applyPendingFilters()">
+            <option value="">All Branches</option>
+          </select>
+          <select class="filter-select" id="filterYearPending" onchange="applyPendingFilters()">
+            <option value="">All Years</option>
+          </select>
+          <select class="filter-select" id="filterSectionPending" onchange="applyPendingFilters()">
+            <option value="">All Sections</option>
+          </select>
+          <div class="search-box"><i class="fas fa-search"></i><input type="text" id="searchPending" placeholder="Search name / reg no / reason..." oninput="applyPendingFilters()"></div>
+          <button class="btn-clear-filters" onclick="clearFilters('pending')"><i class="fas fa-times"></i> Clear</button>
+        </div>
+        <div class="filter-chip-bar" id="pendingChips"></div>
+
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Student</th><th>Branch</th><th>Year</th><th>Section</th><th>Reason</th><th>Teacher</th><th>Attendance</th><th>Action</th></tr></thead>
+            <tbody id="pendingTableBody"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="emptyPending" style="display:none;"><i class="fas fa-check-double"></i><h3>All caught up!</h3></div>
+      </div>
+    </div>
+
+    <div class="section-view" id="section-approved">
+      <div class="card">
+        <div class="card-header"><h2><i class="fas fa-check-circle"></i> Approved Requests</h2><span class="subtitle" id="approvedCount">0</span></div>
+
+        <div class="filters">
+          <select class="filter-select" id="filterBranchApproved" onchange="applyApprovedFilters()">
+            <option value="">All Branches</option>
+          </select>
+          <select class="filter-select" id="filterYearApproved" onchange="applyApprovedFilters()">
+            <option value="">All Years</option>
+          </select>
+          <select class="filter-select" id="filterSectionApproved" onchange="applyApprovedFilters()">
+            <option value="">All Sections</option>
+          </select>
+          <div class="search-box"><i class="fas fa-search"></i><input type="text" id="searchApproved" placeholder="Search..." oninput="applyApprovedFilters()"></div>
+          <button class="btn-clear-filters" onclick="clearFilters('approved')"><i class="fas fa-times"></i> Clear</button>
+        </div>
+
+        <div class="export-bar"><button class="btn btn-outline btn-sm" onclick="exportToCSV('approved')"><i class="fas fa-file-csv"></i> Export CSV</button></div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>ID</th><th>Student</th><th>Branch</th><th>Year</th><th>Section</th><th>Reason</th><th>Approved At</th><th>Action</th></tr></thead>
+            <tbody id="approvedTableBody"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="emptyApproved" style="display:none;"><i class="fas fa-inbox"></i><h3>No approved requests yet</h3></div>
+      </div>
+    </div>
+
+    <div class="section-view" id="section-rejected">
+      <div class="card">
+        <div class="card-header"><h2><i class="fas fa-times-circle"></i> Rejected Requests</h2><span class="subtitle" id="rejectedCount">0</span></div>
+
+        <div class="filters">
+          <select class="filter-select" id="filterBranchRejected" onchange="applyRejectedFilters()">
+            <option value="">All Branches</option>
+          </select>
+          <select class="filter-select" id="filterYearRejected" onchange="applyRejectedFilters()">
+            <option value="">All Years</option>
+          </select>
+          <select class="filter-select" id="filterSectionRejected" onchange="applyRejectedFilters()">
+            <option value="">All Sections</option>
+          </select>
+          <div class="search-box"><i class="fas fa-search"></i><input type="text" id="searchRejected" placeholder="Search..." oninput="applyRejectedFilters()"></div>
+          <button class="btn-clear-filters" onclick="clearFilters('rejected')"><i class="fas fa-times"></i> Clear</button>
+        </div>
+
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>ID</th><th>Student</th><th>Branch</th><th>Year</th><th>Reason</th><th>Rejection Reason</th></tr></thead>
+            <tbody id="rejectedTableBody"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="emptyRejected" style="display:none;"><i class="fas fa-inbox"></i><h3>No rejected requests</h3></div>
+      </div>
+    </div>
+
+    <div class="section-view" id="section-analytics">
+      <div class="card">
+        <div class="card-header"><h2><i class="fas fa-filter"></i> Analytics Filters</h2></div>
+        <div class="filters">
+          <select class="filter-select" id="anBranchFilter" onchange="renderAnalytics()">
+            <option value="">All Branches</option>
+          </select>
+          <select class="filter-select" id="anYearFilter" onchange="renderAnalytics()">
+            <option value="">All Years</option>
+          </select>
+          <select class="filter-select" id="anSectionFilter" onchange="renderAnalytics()">
+            <option value="">All Sections</option>
+          </select>
+          <button class="btn-clear-filters" onclick="clearFilters('analytics')"><i class="fas fa-times"></i> Clear</button>
+        </div>
+        <p style="font-size:0.75rem; color:#059669; margin-top:0.4rem;"><i class="fas fa-info-circle"></i> Filters apply to all analytics below.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h2><i class="fas fa-chart-pie"></i> Status & Approval Overview</h2></div>
+        <div class="analytics-grid">
+          <div class="analytics-block">
+            <h3><i class="fas fa-circle-notch"></i> Status Distribution</h3>
+            <div class="summary-ring">
+              <div class="ring-visual" id="statusRing">
+                <div class="ring-center">
+                  <strong id="ringTotal">0</strong>
+                  <span>Total</span>
+                </div>
+              </div>
+              <div class="ring-legend">
+                <div class="legend-row"><span class="dot green"></span> Approved: <strong id="ringApproved">0</strong></div>
+                <div class="legend-row"><span class="dot orange"></span> Pending: <strong id="ringPending">0</strong></div>
+                <div class="legend-row"><span class="dot red"></span> Rejected: <strong id="ringRejected">0</strong></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="analytics-block">
+            <h3><i class="fas fa-percentage"></i> Approval Rate</h3>
+            <div class="approval-rate-visual">
+              <div class="big-num" id="approvalRateNum">0%</div>
+              <div class="rate-bar">
+                <div class="rate-track"><div class="rate-fill" id="approvalRateFill"></div></div>
+                <p style="font-size:0.72rem; color:#059669; margin-top:6px;">Approved / Total requests</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h2><i class="fas fa-chart-bar"></i> Distribution by Category</h2></div>
+
+        <div class="analytics-grid three">
+          <div class="analytics-block">
+            <h3><i class="fas fa-building"></i> By Branch</h3>
+            <div id="branchBars"></div>
+          </div>
+
+          <div class="analytics-block">
+            <h3><i class="fas fa-calendar-alt"></i> By Year</h3>
+            <div id="yearBars"></div>
+          </div>
+
+          <div class="analytics-block">
+            <h3><i class="fas fa-layer-group"></i> By Section</h3>
+            <div id="sectionBars"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h2><i class="fas fa-tags"></i> Reason & Trend Analysis</h2></div>
+        <div class="analytics-grid">
+          <div class="analytics-block">
+            <h3><i class="fas fa-fire"></i> Top Reasons</h3>
+            <div id="reasonBars"></div>
+          </div>
+          <div class="analytics-block">
+            <h3><i class="fas fa-calendar-week"></i> Submissions (Last 4 Weeks)</h3>
+            <div id="weekBars"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h2><i class="fas fa-signal"></i> Quick Numbers</h2></div>
+        <div class="heat-grid" id="quickHeat"></div>
+      </div>
+    </div>
+
+    <div class="section-view" id="section-audit">
+      <div class="card">
+        <div class="card-header"><h2><i class="fas fa-clipboard-list"></i> Audit Trail</h2></div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Time</th><th>Action</th><th>By</th><th>Target</th></tr></thead>
+            <tbody id="auditTableBody"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="emptyAudit" style="display:none;"><i class="fas fa-clipboard"></i><h3>No audit entries yet</h3></div>
+      </div>
+    </div>
+  </main>
+
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" id="modalContent"></div>
+  </div>
+
+  <script>
+    let currentHOD = null;
+    let allPermissions = [];
+
+    window.addEventListener('DOMContentLoaded', async () => {
+  const session = localStorage.getItem('cps_currentUser');
+  const sessionActive = localStorage.getItem('cps_sessionActive');
+
+  if (!session || sessionActive !== 'true') {
+    localStorage.removeItem('cps_currentUser');
+    localStorage.removeItem('cps_sessionActive');
+    window.location.replace('../index.html');
+    return;
+  }
+  const user = JSON.parse(session);
+  if (user.role !== 'hod') { window.location.replace('../index.html'); return; }
+  currentHOD = user;
+
+  // ⭐⭐ NEW: WAIT FOR FIREBASE DATA
+  if (!window.CPS_BOOT_DONE) {
+    console.log('⏳ HOD: Waiting for Firebase data...');
+    await new Promise(r => window.addEventListener('cps-boot-ready', r, { once: true }));
+    console.log('✅ HOD: Firebase ready');
+  }
+      currentHOD = user;
+
+      const initials = (user.fullName || 'H').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+      document.getElementById('avatarInitials').textContent = initials;
+      document.getElementById('chipName').textContent = user.fullName || 'HOD';
+      document.getElementById('chipDept').textContent = user.department || '--';
+
+      loadData();
+      console.log('✅ HOD Dashboard Loaded:', user.fullName);
+    });
+
+    // ============================================================
+    // ⭐ REAL-TIME listener — LIVE UPDATES
+    // Fires whenever firebase-boot.js detects new data from Firestore.
+    // ============================================================
+    window.addEventListener('cps-data-updated', (e) => {
+      if (e.detail.key === 'cps_permissions' || e.detail.key === 'cps_students') {
+        console.log('📡 Live update:', e.detail.key, '| count:', e.detail.count);
+
+        // Show live pill
+        const pill = document.getElementById('livePill');
+        if (pill) {
+          pill.classList.add('show');
+          setTimeout(() => pill.classList.remove('show'), 2500);
+        }
+
+        // Refresh all data
+        loadData();
+
+        // Flash pending count
+        const pendingEl = document.getElementById('statPending');
+        if (pendingEl) {
+          pendingEl.classList.remove('flash-update');
+          void pendingEl.offsetWidth;
+          pendingEl.classList.add('flash-update');
+        }
+      }
+    });
+
+    const sectionInfo = {
+      'dashboard': { title: 'Dashboard', sub: 'Welcome to your HOD portal' },
+      'pending': { title: 'Pending Approval', sub: 'Requests awaiting your final approval' },
+      'approved': { title: 'Approved Requests', sub: 'Requests you have approved' },
+      'rejected': { title: 'Rejected Requests', sub: 'Requests you have rejected' },
+      'analytics': { title: 'Analytics', sub: 'Department insights with filters' },
+      'audit': { title: 'Audit Trail', sub: 'Complete activity log' }
+    };
+
+    function switchSection(section, linkEl) {
+      document.querySelectorAll('.section-view').forEach(s => s.classList.remove('active'));
+      document.getElementById('section-' + section).classList.add('active');
+      document.querySelectorAll('.nav-menu a').forEach(a => a.classList.remove('active'));
+      if (linkEl) linkEl.classList.add('active');
+      const info = sectionInfo[section];
+      if (info) {
+        document.getElementById('pageTitle').textContent = info.title;
+        document.getElementById('pageSubtitle').textContent = info.sub;
+      }
+      document.querySelector('.main-content').scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function loadData() {
+  const all = JSON.parse(localStorage.getItem('cps_permissions') || '[]');
+  
+  // ⭐⭐ FILTER BY HOD's DEPARTMENT ONLY
+  const myDept = (currentHOD.department || '').trim().toUpperCase();
+  allPermissions = all.filter(p => {
+    const pBranch = (p.branch || '').trim().toUpperCase();
+    return !myDept || pBranch === myDept;
+  });
+  
+  allPermissions.sort((a, b) => new Date(b.submittedAt || 0) - new Date(a.submittedAt || 0));
+  populateAllFilters();
+  updateStats();
+  renderTables();
+  renderAnalytics();
+  renderAuditTrail();
+}
+
+    function populateAllFilters() {
+      const branches = new Set();
+      const years = new Set();
+      const sections = new Set();
+
+      allPermissions.forEach(p => {
+        if (p.branch) branches.add(p.branch);
+        if (p.year) years.add(p.year);
+        if (p.section) sections.add(p.section);
+      });
+
+      const branchOpts = [...branches].sort().map(b => `<option value="${b}">${b}</option>`).join('');
+      const yearOpts = [...years].sort().map(y => `<option value="${y}">${y}</option>`).join('');
+      const sectionOpts = [...sections].sort().map(s => `<option value="${s}">${s}</option>`).join('');
+
+      setOptions('filterBranchPending', 'All Branches', branchOpts);
+      setOptions('filterYearPending', 'All Years', yearOpts);
+      setOptions('filterSectionPending', 'All Sections', sectionOpts);
+
+      setOptions('filterBranchApproved', 'All Branches', branchOpts);
+      setOptions('filterYearApproved', 'All Years', yearOpts);
+      setOptions('filterSectionApproved', 'All Sections', sectionOpts);
+
+      setOptions('filterBranchRejected', 'All Branches', branchOpts);
+      setOptions('filterYearRejected', 'All Years', yearOpts);
+      setOptions('filterSectionRejected', 'All Sections', sectionOpts);
+
+      setOptions('anBranchFilter', 'All Branches', branchOpts);
+      setOptions('anYearFilter', 'All Years', yearOpts);
+      setOptions('anSectionFilter', 'All Sections', sectionOpts);
+    }
+
+    function setOptions(id, firstLabel, optsHtml) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const current = el.value;
+      el.innerHTML = `<option value="">${firstLabel}</option>${optsHtml}`;
+      el.value = current;
+    }
+
+    function updateStats() {
+      const total = allPermissions.length;
+      const pending = allPermissions.filter(p => p.status === 'teacher_verified' || p.status === 'pending_hod_approval').length;
+      const approved = allPermissions.filter(p => ['hod_approved', 'approved'].includes(p.status)).length;
+      const rejected = allPermissions.filter(p => p.status === 'hod_rejected').length;
+      const today = new Date().toDateString();
+      const todayCount = allPermissions.filter(p => new Date(p.submittedAt).toDateString() === today).length;
+      const out = allPermissions.filter(p => p.status === 'out').length;
+
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statPending').textContent = pending;
+      document.getElementById('statApproved').textContent = approved;
+      document.getElementById('statRejected').textContent = rejected;
+      document.getElementById('statToday').textContent = todayCount;
+      document.getElementById('statOut').textContent = out;
+      document.getElementById('badgePending').textContent = pending;
+      document.getElementById('pendingCount').textContent = pending + ' requests';
+      document.getElementById('approvedCount').textContent = approved + ' requests';
+      document.getElementById('rejectedCount').textContent = rejected + ' requests';
+    }
+
+    function getStudentProfile(regNo) {
+      const students = JSON.parse(localStorage.getItem('cps_students') || '[]');
+      return students.find(s => s.regNo === regNo) || null;
+    }
+
+    function renderTables() {
+      applyPendingFilters();
+      applyApprovedFilters();
+      applyRejectedFilters();
+    }
+
+    function renderPendingRow(p) {
+      const profile = getStudentProfile(p.regNo);
+      const initials = (p.fullName || 'S').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+      const photoHTML = (profile && profile.photo) ? `<img src="${profile.photo}" alt="">` : initials;
+      return `
+        <tr>
+          <td>
+            <span class="table-avatar">${photoHTML}</span>
+            <span class="table-name">${escapeHtml(p.fullName || '--')}<small>${escapeHtml(p.regNo || '--')} · ${escapeHtml(p.permissionId || '')}</small></span>
+          </td>
+          <td><span class="pill branch">${escapeHtml(p.branch || '--')}</span></td>
+          <td><span class="pill year">${escapeHtml(p.year || '--')}</span></td>
+          <td><span class="pill section">${escapeHtml(p.section || '--')}</span></td>
+          <td style="font-weight:600;">${escapeHtml(p.reason || '--')}</td>
+          <td>
+            <div class="teacher-verified-badge">
+              <i class="fas fa-check-circle"></i>
+              <div>${escapeHtml(p.teacherName || p.verifiedBy || 'Verified')}<small>Parent ✓</small></div>
+            </div>
+          </td>
+          <td><strong>${p.attendance || 0}%</strong></td>
+          <td>
+            <div class="table-actions">
+              <button class="icon-btn" title="View" onclick="viewRequest('${p.permissionId}')"><i class="fas fa-eye"></i></button>
+              <button class="icon-btn success" title="Approve" onclick="openApproveModal('${p.permissionId}')"><i class="fas fa-check"></i></button>
+              <button class="icon-btn danger" title="Reject" onclick="openRejectModal('${p.permissionId}')"><i class="fas fa-times"></i></button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+
+    function applyPendingFilters() {
+      const branch = document.getElementById('filterBranchPending').value;
+      const year = document.getElementById('filterYearPending').value;
+      const section = document.getElementById('filterSectionPending').value;
+      const search = document.getElementById('searchPending').value.toLowerCase().trim();
+
+      let filtered = allPermissions.filter(p => p.status === 'teacher_verified' || p.status === 'pending_hod_approval');
+      if (branch) filtered = filtered.filter(p => p.branch === branch);
+      if (year) filtered = filtered.filter(p => p.year === year);
+      if (section) filtered = filtered.filter(p => p.section === section);
+      if (search) filtered = filtered.filter(p => [p.fullName, p.regNo, p.reason, p.permissionId].join(' ').toLowerCase().includes(search));
+
+      const tbody = document.getElementById('pendingTableBody');
+      const empty = document.getElementById('emptyPending');
+      const wrapper = tbody.closest('.table-wrapper');
+      if (filtered.length === 0) { tbody.innerHTML = ''; wrapper.style.display = 'none'; empty.style.display = 'block'; }
+      else { wrapper.style.display = 'block'; empty.style.display = 'none'; tbody.innerHTML = filtered.map(renderPendingRow).join(''); }
+
+      renderFilterChips('pendingChips', { branch, year, section, search }, 'clearFilters(\'pending\')');
+    }
+
+    function applyApprovedFilters() {
+      const branch = document.getElementById('filterBranchApproved').value;
+      const year = document.getElementById('filterYearApproved').value;
+      const section = document.getElementById('filterSectionApproved').value;
+      const search = document.getElementById('searchApproved').value.toLowerCase().trim();
+
+      let filtered = allPermissions.filter(p => ['hod_approved', 'approved'].includes(p.status));
+      if (branch) filtered = filtered.filter(p => p.branch === branch);
+      if (year) filtered = filtered.filter(p => p.year === year);
+      if (section) filtered = filtered.filter(p => p.section === section);
+      if (search) filtered = filtered.filter(p => [p.fullName, p.regNo, p.reason, p.permissionId].join(' ').toLowerCase().includes(search));
+
+      const tbody = document.getElementById('approvedTableBody');
+      const empty = document.getElementById('emptyApproved');
+      const wrapper = tbody.closest('.table-wrapper');
+      if (filtered.length === 0) { tbody.innerHTML = ''; wrapper.style.display = 'none'; empty.style.display = 'block'; return; }
+      wrapper.style.display = 'block'; empty.style.display = 'none';
+
+      tbody.innerHTML = filtered.map(p => {
+        const profile = getStudentProfile(p.regNo);
+        const initials = (p.fullName || 'S').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+        const photoHTML = (profile && profile.photo) ? `<img src="${profile.photo}" alt="">` : initials;
+        return `
+          <tr>
+            <td><strong>${escapeHtml(p.permissionId)}</strong></td>
+            <td>
+              <span class="table-avatar">${photoHTML}</span>
+              <span class="table-name">${escapeHtml(p.fullName)}<small>${escapeHtml(p.regNo)}</small></span>
+            </td>
+            <td><span class="pill branch">${escapeHtml(p.branch || '--')}</span></td>
+            <td><span class="pill year">${escapeHtml(p.year || '--')}</span></td>
+            <td><span class="pill section">${escapeHtml(p.section || '--')}</span></td>
+            <td>${escapeHtml(p.reason)}</td>
+            <td>${formatDate(p.hodApprovedAt)}</td>
+            <td><button class="icon-btn" title="View" onclick="viewRequest('${p.permissionId}')"><i class="fas fa-eye"></i></button></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function applyRejectedFilters() {
+      const branch = document.getElementById('filterBranchRejected').value;
+      const year = document.getElementById('filterYearRejected').value;
+      const section = document.getElementById('filterSectionRejected').value;
+      const search = document.getElementById('searchRejected').value.toLowerCase().trim();
+
+      let filtered = allPermissions.filter(p => p.status === 'hod_rejected');
+      if (branch) filtered = filtered.filter(p => p.branch === branch);
+      if (year) filtered = filtered.filter(p => p.year === year);
+      if (section) filtered = filtered.filter(p => p.section === section);
+      if (search) filtered = filtered.filter(p => [p.fullName, p.regNo, p.reason, p.permissionId].join(' ').toLowerCase().includes(search));
+
+      const tbody = document.getElementById('rejectedTableBody');
+      const empty = document.getElementById('emptyRejected');
+      const wrapper = tbody.closest('.table-wrapper');
+      if (filtered.length === 0) { tbody.innerHTML = ''; wrapper.style.display = 'none'; empty.style.display = 'block'; return; }
+      wrapper.style.display = 'block'; empty.style.display = 'none';
+
+      tbody.innerHTML = filtered.map(p => `
+        <tr>
+          <td><strong>${escapeHtml(p.permissionId)}</strong></td>
+          <td>${escapeHtml(p.fullName)}<br><small style="color:#6ee7b7; font-size:0.7rem;">${escapeHtml(p.regNo)}</small></td>
+          <td><span class="pill branch">${escapeHtml(p.branch || '--')}</span></td>
+          <td><span class="pill year">${escapeHtml(p.year || '--')}</span></td>
+          <td>${escapeHtml(p.reason)}</td>
+          <td style="font-size:0.78rem; color:#b91c1c;">${escapeHtml(p.hodRejectionReason || '--')}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderFilterChips(containerId, filters, clearFn) {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      const parts = [];
+      if (filters.branch) parts.push(`Branch: ${filters.branch}`);
+      if (filters.year) parts.push(`Year: ${filters.year}`);
+      if (filters.section) parts.push(`Section: ${filters.section}`);
+      if (filters.search) parts.push(`Search: "${filters.search}"`);
+      if (parts.length === 0) { el.innerHTML = ''; return; }
+      el.innerHTML = parts.map(p => `<span class="filter-chip"><i class="fas fa-filter"></i> ${escapeHtml(p)}</span>`).join('') +
+        `<button class="filter-chip" style="background:#fee2e2; color:#b91c1c; cursor:pointer; border:none; font-family:inherit;" onclick="${clearFn}"><i class="fas fa-times"></i> Clear all</button>`;
+    }
+
+    function clearFilters(scope) {
+      if (scope === 'pending') {
+        document.getElementById('filterBranchPending').value = '';
+        document.getElementById('filterYearPending').value = '';
+        document.getElementById('filterSectionPending').value = '';
+        document.getElementById('searchPending').value = '';
+        applyPendingFilters();
+      } else if (scope === 'approved') {
+        document.getElementById('filterBranchApproved').value = '';
+        document.getElementById('filterYearApproved').value = '';
+        document.getElementById('filterSectionApproved').value = '';
+        document.getElementById('searchApproved').value = '';
+        applyApprovedFilters();
+      } else if (scope === 'rejected') {
+        document.getElementById('filterBranchRejected').value = '';
+        document.getElementById('filterYearRejected').value = '';
+        document.getElementById('filterSectionRejected').value = '';
+        document.getElementById('searchRejected').value = '';
+        applyRejectedFilters();
+      } else if (scope === 'analytics') {
+        document.getElementById('anBranchFilter').value = '';
+        document.getElementById('anYearFilter').value = '';
+        document.getElementById('anSectionFilter').value = '';
+        renderAnalytics();
+      }
+    }
+
+    function viewRequest(permId) {
+      const p = allPermissions.find(x => x.permissionId === permId);
+      if (!p) return;
+      const profile = getStudentProfile(p.regNo);
+      const initials = (p.fullName || 'S').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+      const photoHTML = (profile && profile.photo) ? `<img src="${profile.photo}" alt="">` : initials;
+
+      const modal = document.getElementById('modalContent');
+      modal.innerHTML = `
+        <h3><i class="fas fa-file-alt"></i> Complete Student Details</h3>
+        <p class="modal-sub">Permission ID: ${escapeHtml(p.permissionId)}</p>
+
+        <div class="profile-header">
+          <div class="profile-avatar-lg">${photoHTML}</div>
+          <div class="profile-main">
+            <h4>${escapeHtml(p.fullName || '--')}</h4>
+            <p>${escapeHtml(p.regNo || '--')} · ${escapeHtml(p.branch || '--')} · ${escapeHtml(p.year || '--')} · Sec ${escapeHtml(p.section || '--')}</p>
+          </div>
+        </div>
+
+        <div class="teacher-box">
+          <h4><i class="fas fa-check-double"></i> Class Teacher Verification Status</h4>
+          <div class="teacher-check-grid">
+            <div class="teacher-check-item">
+              <label>Verified By</label>
+              <span class="ok">✓ ${escapeHtml(p.teacherName || p.verifiedBy || 'Teacher')}</span>
+            </div>
+            <div class="teacher-check-item">
+              <label>Verified At</label>
+              <span>${formatDateTime(p.verifiedAt)}</span>
+            </div>
+            <div class="teacher-check-item">
+              <label>Parent Contacted</label>
+              <span class="ok">✓ Yes</span>
+            </div>
+            <div class="teacher-check-item">
+              <label>Parent Confirmed</label>
+              <span class="${p.parentConfirmed ? 'ok' : ''}">${p.parentConfirmed ? '✓ Yes' : (p.parentNoResponse ? '⚠️ No response' : '--')}</span>
+            </div>
+          </div>
+          ${p.enquiryNotes ? `
+            <div style="margin-top:0.7rem; padding-top:0.7rem; border-top:1px dashed #a7f3d0;">
+              <label style="font-size:0.62rem; text-transform:uppercase; color:#059669; font-weight:700;">Teacher Enquiry Notes</label>
+              <p style="font-size:0.8rem; color:#065f46; font-style:italic; margin-top:3px;">${escapeHtml(p.enquiryNotes)}</p>
+            </div>
+          ` : ''}
+        </div>
+
+        <div class="info-block">
+          <h4><i class="fas fa-graduation-cap"></i> Academic Details</h4>
+          <div class="detail-grid">
+            <div class="detail-item"><label>Register No</label><span>${escapeHtml(p.regNo || '--')}</span></div>
+            <div class="detail-item"><label>Branch</label><span>${escapeHtml(p.branch || '--')}</span></div>
+            <div class="detail-item"><label>Section</label><span>${escapeHtml(p.section || '--')}</span></div>
+            <div class="detail-item"><label>Year</label><span>${escapeHtml(p.year || '--')}</span></div>
+            <div class="detail-item"><label>Semester</label><span>${escapeHtml(p.semester || '--')}</span></div>
+            <div class="detail-item"><label>Attendance</label><span>${p.attendance || 0}%</span></div>
+          </div>
+        </div>
+
+        <div class="info-block">
+          <h4><i class="fas fa-user"></i> Personal Details</h4>
+          <div class="detail-grid">
+            <div class="detail-item"><label>Full Name</label><span>${escapeHtml(p.fullName || '--')}</span></div>
+            <div class="detail-item"><label>Mobile</label><span>${escapeHtml(p.mobile || '--')}</span></div>
+            <div class="detail-item"><label>Email</label><span>${escapeHtml(p.email || '--')}</span></div>
+          </div>
+        </div>
+
+        <div class="info-block">
+          <h4><i class="fas fa-user-friends"></i> Parent / Guardian</h4>
+          <div class="detail-grid">
+            <div class="detail-item"><label>Parent Name</label><span>${escapeHtml(p.parentName || '--')}</span></div>
+            <div class="detail-item"><label>Parent Mobile</label><span>${escapeHtml(p.parentMobile || '--')}</span></div>
+          </div>
+        </div>
+
+        <div class="info-block" style="background:#fef3d6; border-color:#fde68a;">
+          <h4 style="color:#b45309;"><i class="fas fa-clock"></i> Permission Request</h4>
+          <div class="detail-grid">
+            <div class="detail-item"><label>Type</label><span>${escapeHtml(p.type || '--')}</span></div>
+            <div class="detail-item"><label>Reason</label><span>${escapeHtml(p.reason || '--')}</span></div>
+            <div class="detail-item"><label>Destination</label><span>${escapeHtml(p.destination || '--')}</span></div>
+            <div class="detail-item"><label>Date</label><span>${escapeHtml(p.date || '--')}</span></div>
+            <div class="detail-item"><label>Out Time</label><span>${escapeHtml(p.outTime || '--')}</span></div>
+            <div class="detail-item"><label>Return Time</label><span>${escapeHtml(p.returnTime || '--')}</span></div>
+            <div class="detail-item"><label>Mode</label><span>${escapeHtml(p.mode || '--')}</span></div>
+            <div class="detail-item"><label>Status</label><span>${getStatusInfo(p.status).text}</span></div>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn btn-outline" onclick="closeModal()"><i class="fas fa-times"></i> Close</button>
+          ${(p.status === 'teacher_verified' || p.status === 'pending_hod_approval') ? `
+            <button class="btn btn-danger" onclick="closeModal(); openRejectModal('${p.permissionId}')"><i class="fas fa-times"></i> Reject</button>
+            <button class="btn btn-success" onclick="closeModal(); openApproveModal('${p.permissionId}')"><i class="fas fa-check"></i> Approve</button>
+          ` : ''}
+        </div>
+      `;
+      document.getElementById('modalOverlay').classList.add('show');
+    }
+
+    function openApproveModal(permId) {
+      const p = allPermissions.find(x => x.permissionId === permId);
+      if (!p) return;
+      const profile = getStudentProfile(p.regNo);
+      const initials = (p.fullName || 'S').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+      const photoHTML = (profile && profile.photo) ? `<img src="${profile.photo}" alt="">` : initials;
+
+      const modal = document.getElementById('modalContent');
+      modal.innerHTML = `
+        <h3><i class="fas fa-check-circle"></i> Final Approval</h3>
+        <p class="modal-sub">${escapeHtml(p.fullName || '')} · ${escapeHtml(p.permissionId || '')}</p>
+
+        <div class="profile-header">
+          <div class="profile-avatar-lg">${photoHTML}</div>
+          <div class="profile-main">
+            <h4>${escapeHtml(p.fullName || '--')}</h4>
+            <p>${escapeHtml(p.regNo || '--')} · ${escapeHtml(p.branch || '--')} · ${escapeHtml(p.year || '--')} · Sec ${escapeHtml(p.section || '--')}</p>
+          </div>
+        </div>
+
+        <div class="teacher-box">
+          <h4><i class="fas fa-check-double"></i> Teacher Verification Confirmed</h4>
+          <div class="teacher-check-grid">
+            <div class="teacher-check-item"><label>Teacher</label><span class="ok">✓ ${escapeHtml(p.teacherName || p.verifiedBy || 'Verified')}</span></div>
+            <div class="teacher-check-item"><label>Verified At</label><span>${formatDateTime(p.verifiedAt)}</span></div>
+            <div class="teacher-check-item"><label>Parent Contacted</label><span class="ok">✓ Yes</span></div>
+            <div class="teacher-check-item"><label>Parent Confirmed</label><span class="${p.parentConfirmed ? 'ok' : ''}">${p.parentConfirmed ? '✓ Yes' : 'No response'}</span></div>
+          </div>
+        </div>
+
+        <div class="info-block" style="background:#fef3d6; border-color:#fde68a;">
+          <h4 style="color:#b45309;"><i class="fas fa-clock"></i> Permission Summary</h4>
+          <div class="detail-grid">
+            <div class="detail-item"><label>Reason</label><span>${escapeHtml(p.reason || '--')}</span></div>
+            <div class="detail-item"><label>Destination</label><span>${escapeHtml(p.destination || '--')}</span></div>
+            <div class="detail-item"><label>Date</label><span>${escapeHtml(p.date || '--')}</span></div>
+            <div class="detail-item"><label>Time</label><span>${escapeHtml((p.outTime || '--') + ' – ' + (p.returnTime || '--'))}</span></div>
+            <div class="detail-item"><label>Attendance</label><span>${p.attendance || 0}%</span></div>
+            <div class="detail-item"><label>Mode</label><span>${escapeHtml(p.mode || '--')}</span></div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:1.2rem;">
+          <label style="font-size:0.72rem; font-weight:700; color:#065f46; display:block; margin-bottom:5px;">HOD Remarks (Optional)</label>
+          <textarea class="remarks-box" id="hodRemarks" placeholder="Any additional notes..."></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn btn-outline" onclick="closeModal()"><i class="fas fa-times"></i> Cancel</button>
+          <button class="btn btn-success" onclick="confirmApprove('${p.permissionId}')"><i class="fas fa-check"></i> Final Approve & Generate QR</button>
+        </div>
+      `;
+      document.getElementById('modalOverlay').classList.add('show');
+    }
+
+    function openRejectModal(permId) {
+      const p = allPermissions.find(x => x.permissionId === permId);
+      if (!p) return;
+      const modal = document.getElementById('modalContent');
+      modal.innerHTML = `
+        <h3><i class="fas fa-times-circle"></i> Reject Request</h3>
+        <p class="modal-sub">${escapeHtml(p.fullName || '')} · ${escapeHtml(p.permissionId || '')}</p>
+        <div class="info-block" style="background:#fef2f2; border-color:#fecaca;">
+          <h4 style="color:#b91c1c;"><i class="fas fa-exclamation-triangle"></i> Rejection Reason (Required)</h4>
+          <textarea class="remarks-box" id="hodRejectReason" placeholder="Explain why..." style="border-color:#fecaca;"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-outline" onclick="closeModal()"><i class="fas fa-times"></i> Cancel</button>
+          <button class="btn btn-danger" onclick="confirmReject('${p.permissionId}')"><i class="fas fa-times"></i> Confirm Reject</button>
+        </div>
+      `;
+      document.getElementById('modalOverlay').classList.add('show');
+    }
+
+    function confirmApprove(permId) {
+      const remarks = document.getElementById('hodRemarks')?.value.trim() || '';
+      const allRequests = JSON.parse(localStorage.getItem('cps_permissions') || '[]');
+      const idx = allRequests.findIndex(x => x.permissionId === permId);
+      if (idx === -1) return;
+
+      allRequests[idx].status = 'hod_approved';
+      allRequests[idx].hodApprovedAt = new Date().toISOString();
+      allRequests[idx].hodApprovedBy = currentHOD.fullName;
+      allRequests[idx].hodRemarks = remarks;
+      allRequests[idx].qrGenerated = true;
+      localStorage.setItem('cps_permissions', JSON.stringify(allRequests));
+
+      const hodQueue = JSON.parse(localStorage.getItem('cps_hodQueue') || '[]');
+      localStorage.setItem('cps_hodQueue', JSON.stringify(hodQueue.filter(p => p.permissionId !== permId)));
+
+      addAuditLog('HOD Approved', currentHOD.fullName, permId);
+      closeModal();
+      showToast(`✅ ${permId} approved! QR slip generated.`, 'success');
+      loadData();
+    }
+
+    function confirmReject(permId) {
+      const reason = document.getElementById('hodRejectReason')?.value.trim();
+      if (!reason) { showToast('Provide rejection reason.', 'error'); return; }
+      const allRequests = JSON.parse(localStorage.getItem('cps_permissions') || '[]');
+      const idx = allRequests.findIndex(x => x.permissionId === permId);
+      if (idx === -1) return;
+      allRequests[idx].status = 'hod_rejected';
+      allRequests[idx].hodRejectedAt = new Date().toISOString();
+      allRequests[idx].hodRejectedBy = currentHOD.fullName;
+      allRequests[idx].hodRejectionReason = reason;
+      localStorage.setItem('cps_permissions', JSON.stringify(allRequests));
+      addAuditLog('HOD Rejected', currentHOD.fullName, permId);
+      closeModal();
+      showToast(`❌ ${permId} rejected.`, 'warning');
+      loadData();
+    }
+
+    function getFilteredForAnalytics() {
+      const branch = document.getElementById('anBranchFilter')?.value || '';
+      const year = document.getElementById('anYearFilter')?.value || '';
+      const section = document.getElementById('anSectionFilter')?.value || '';
+
+      let data = allPermissions;
+      if (branch) data = data.filter(p => p.branch === branch);
+      if (year) data = data.filter(p => p.year === year);
+      if (section) data = data.filter(p => p.section === section);
+      return data;
+    }
+
+    function renderAnalytics() {
+      const data = getFilteredForAnalytics();
+
+      const total = data.length;
+      const pending = data.filter(p => p.status === 'teacher_verified' || p.status === 'pending_hod_approval').length;
+      const approved = data.filter(p => ['hod_approved', 'approved'].includes(p.status)).length;
+      const rejected = data.filter(p => p.status === 'hod_rejected').length;
+
+      const approvedDeg = total ? (approved / total) * 360 : 0;
+      const pendingDeg = total ? approvedDeg + (pending / total) * 360 : 0;
+      const ring = document.getElementById('statusRing');
+      if (ring) {
+        ring.style.setProperty('--approved-deg', approvedDeg + 'deg');
+        ring.style.setProperty('--pending-deg', pendingDeg + 'deg');
+      }
+      document.getElementById('ringTotal').textContent = total;
+      document.getElementById('ringApproved').textContent = approved;
+      document.getElementById('ringPending').textContent = pending;
+      document.getElementById('ringRejected').textContent = rejected;
+
+      const rate = total ? Math.round((approved / total) * 100) : 0;
+      document.getElementById('approvalRateNum').textContent = rate + '%';
+      document.getElementById('approvalRateFill').style.width = rate + '%';
+
+      renderBarBlock('branchBars', countBy(data, 'branch'), data.length);
+
+      const yearCounts = countBy(data, 'year');
+      const yearOrder = ['I Year', 'II Year', 'III Year', 'IV Year'];
+      const orderedYears = {};
+      yearOrder.forEach(y => { if (yearCounts[y]) orderedYears[y] = yearCounts[y]; });
+      Object.keys(yearCounts).forEach(y => { if (!orderedYears[y]) orderedYears[y] = yearCounts[y]; });
+      renderBarBlock('yearBars', orderedYears, data.length);
+
+      renderBarBlock('sectionBars', countBy(data, 'section'), data.length);
+
+      const reasonCounts = {};
+      data.forEach(p => {
+        const r = p.type || p.reason || 'Other';
+        reasonCounts[r] = (reasonCounts[r] || 0) + 1;
+      });
+      renderBarBlock('reasonBars', reasonCounts, data.length, 6);
+
+      const weeks = [];
+      const now = new Date();
+      for (let i = 3; i >= 0; i--) {
+        const start = new Date(now);
+        start.setDate(now.getDate() - (i * 7 + 6));
+        start.setHours(0,0,0,0);
+        const end = new Date(now);
+        end.setDate(now.getDate() - (i * 7));
+        end.setHours(23,59,59,999);
+        const count = data.filter(p => {
+          const d = new Date(p.submittedAt);
+          return d >= start && d <= end;
+        }).length;
+        weeks.push({ label: 'Week ' + (4 - i), count });
+      }
+      const weekMap = {};
+      weeks.forEach(w => weekMap[w.label] = w.count);
+      renderBarBlock('weekBars', weekMap, data.length);
+
+      const out = data.filter(p => p.status === 'out').length;
+      const returned = data.filter(p => p.status === 'returned').length;
+      const late = data.filter(p => p.lateReturn).length;
+      const parentContact = data.filter(p => p.parentContacted).length;
+      const emerg = data.filter(p => (p.type || '').toLowerCase().includes('emergency')).length;
+
+      document.getElementById('quickHeat').innerHTML = `
+        <div class="heat-card"><div class="heat-label">Total</div><div class="heat-value">${total}</div><div class="heat-sub">requests</div></div>
+        <div class="heat-card"><div class="heat-label">Approved</div><div class="heat-value">${approved}</div><div class="heat-sub">by you</div></div>
+        <div class="heat-card"><div class="heat-label">Pending</div><div class="heat-value">${pending}</div><div class="heat-sub">awaiting</div></div>
+        <div class="heat-card"><div class="heat-label">Rejected</div><div class="heat-value">${rejected}</div><div class="heat-sub">declined</div></div>
+        <div class="heat-card"><div class="heat-label">Currently<br>OUT</div><div class="heat-value">${out}</div><div class="heat-sub">on leave</div></div>
+        <div class="heat-card"><div class="heat-label">Returned</div><div class="heat-value">${returned}</div><div class="heat-sub">came back</div></div>
+        <div class="heat-card"><div class="heat-label">Late<br>Returns</div><div class="heat-value">${late}</div><div class="heat-sub">flagged</div></div>
+        <div class="heat-card"><div class="heat-label">Parent<br>Contacted</div><div class="heat-value">${parentContact}</div><div class="heat-sub">calls</div></div>
+        <div class="heat-card"><div class="heat-label">Emergency</div><div class="heat-value">${emerg}</div><div class="heat-sub">urgent</div></div>
+      `;
+    }
+
+    function countBy(arr, key) {
+      const counts = {};
+      arr.forEach(item => {
+        const v = item[key] || '—';
+        counts[v] = (counts[v] || 0) + 1;
+      });
+      return counts;
+    }
+
+    function renderBarBlock(containerId, counts, total, limit = 0) {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      const entries = Object.entries(counts);
+      if (entries.length === 0) {
+        el.innerHTML = '<p style="text-align:center; color:#6ee7b7; padding:1rem; font-size:0.78rem;">No data</p>';
+        return;
+      }
+      const sorted = entries.sort((a, b) => b[1] - a[1]);
+      const display = limit ? sorted.slice(0, limit) : sorted;
+      const maxVal = Math.max(...display.map(e => e[1]), 1);
+
+      el.innerHTML = display.map(([label, count]) => {
+        const pct = Math.round((count / maxVal) * 100);
+        const pctOfTotal = total ? Math.round((count / total) * 100) : 0;
+        return `
+          <div class="bar-row">
+            <span class="bar-label">${escapeHtml(label.length > 14 ? label.slice(0, 14) + '…' : label)}</span>
+            <div class="bar-track">
+              <div class="bar-fill" style="width:${Math.max(pct, 8)}%;">${pctOfTotal}%</div>
+            </div>
+            <span class="bar-value">${count}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderAuditTrail() {
+      const logs = JSON.parse(localStorage.getItem('cps_auditLog') || '[]');
+      const tbody = document.getElementById('auditTableBody');
+      const empty = document.getElementById('emptyAudit');
+      const wrapper = tbody.closest('.table-wrapper');
+      if (logs.length === 0) { tbody.innerHTML = ''; wrapper.style.display = 'none'; empty.style.display = 'block'; return; }
+      wrapper.style.display = 'block'; empty.style.display = 'none';
+      tbody.innerHTML = logs.slice(0, 50).map(log => `
+        <tr>
+          <td style="font-size:0.75rem; color:#059669;">${formatDateTime(log.at)}</td>
+          <td>${escapeHtml(log.action || '--')}</td>
+          <td>${escapeHtml(log.by || 'System')}</td>
+          <td style="font-size:0.78rem;">${escapeHtml(log.target || '--')}</td>
+        </tr>
+      `).join('');
+    }
+
+    function addAuditLog(action, by, target) {
+      const logs = JSON.parse(localStorage.getItem('cps_auditLog') || '[]');
+      logs.unshift({ at: new Date().toISOString(), action, by, target });
+      localStorage.setItem('cps_auditLog', JSON.stringify(logs.slice(0, 200)));
+    }
+
+    function exportToCSV(filter = 'all') {
+      let data = allPermissions;
+      if (filter === 'approved') data = allPermissions.filter(p => ['hod_approved', 'approved'].includes(p.status));
+      if (data.length === 0) { showToast('No data to export.', 'info'); return; }
+
+      const headers = ['Permission ID', 'Student Name', 'Register No', 'Branch', 'Section', 'Year', 'Semester',
+                       'Attendance', 'Reason Type', 'Reason', 'Destination', 'Date', 'Out Time', 'Return Time', 'Mode',
+                       'Parent Name', 'Parent Mobile', 'Teacher', 'Parent Contacted', 'Parent Confirmed',
+                       'HOD', 'Status', 'Submitted At', 'Approved At'];
+
+      const rows = data.map(p => [
+        p.permissionId || '', p.fullName || '', p.regNo || '',
+        p.branch || '', p.section || '', p.year || '', p.semester || '',
+        p.attendance || '', p.type || '', p.reason || '', p.destination || '',
+        p.date || '', p.outTime || '', p.returnTime || '', p.mode || '',
+        p.parentName || '', p.parentMobile || '',
+        p.teacherName || '', p.parentContacted ? 'Yes' : 'No', p.parentConfirmed ? 'Yes' : 'No',
+        p.hodApprovedBy || '', getStatusInfo(p.status).text,
+        p.submittedAt ? new Date(p.submittedAt).toLocaleString('en-IN') : '',
+        p.hodApprovedAt ? new Date(p.hodApprovedAt).toLocaleString('en-IN') : ''
+      ]);
+
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      ].join('\n');
+
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `HOD-Permissions-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast(`✅ Exported ${data.length} rows to CSV`, 'success');
+    }
+
+    function getStatusInfo(status) {
+      const map = {
+        'pending_teacher_verification': { cls: 'pending', text: 'Pending Teacher' },
+        'teacher_verified': { cls: 'pending', text: 'Pending HOD' },
+        'teacher_rejected': { cls: 'rejected', text: 'Teacher Rejected' },
+        'hod_approved': { cls: 'approved', text: 'Approved' },
+        'approved': { cls: 'approved', text: 'Approved' },
+        'hod_rejected': { cls: 'rejected', text: 'HOD Rejected' },
+        'out': { cls: 'approved', text: 'OUT' },
+        'returned': { cls: 'approved', text: 'Returned' },
+        'expired': { cls: 'rejected', text: 'Expired' }
+      };
+      return map[status] || { cls: 'pending', text: 'Pending' };
+    }
+
+    function closeModal() { document.getElementById('modalOverlay').classList.remove('show'); }
+    document.getElementById('modalOverlay').addEventListener('click', (e) => { if (e.target.id === 'modalOverlay') closeModal(); });
+
+    function showToast(message, type = 'info') {
+      const colors = {
+        success: { bg: '#d1fae5', color: '#065f46', border: '#a7f3d0', icon: 'fa-check-circle' },
+        error: { bg: '#fee2e2', color: '#991b1b', border: '#fecaca', icon: 'fa-exclamation-circle' },
+        info: { bg: '#dbeafe', color: '#1e40af', border: '#bfdbfe', icon: 'fa-info-circle' },
+        warning: { bg: '#fef3c7', color: '#92400e', border: '#fde68a', icon: 'fa-exclamation-triangle' }
+      };
+      const c = colors[type] || colors.info;
+      const existing = document.querySelector('.toast-alert');
+      if (existing) existing.remove();
+      const toast = document.createElement('div');
+      toast.className = 'toast-alert';
+      toast.style.background = c.bg; toast.style.color = c.color; toast.style.border = '1px solid ' + c.border;
+      toast.innerHTML = `<i class="fas ${c.icon}"></i> <span>${message}</span>`;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.style.transition = '0.3s'; toast.style.opacity = '0'; toast.style.transform = 'translateX(30px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+
+    function formatDate(iso) {
+      if (!iso) return '--';
+      try { return new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); }
+      catch (e) { return iso; }
+    }
+
+    function formatDateTime(iso) {
+      if (!iso) return '--';
+      try { return new Date(iso).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); }
+      catch (e) { return iso; }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+    function logout() {
+      if (confirm('Logout from HOD portal?')) {
+        localStorage.removeItem('cps_currentUser');
+        localStorage.removeItem('cps_sessionActive');
+        window.location.replace('../index.html');
+      }
+    }
+  </script>
+</body>
+</html>

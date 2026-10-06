@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>College Permission System | Login & Register</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+  <script type="module" src="./firebase-boot.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: linear-gradient(145deg, #eef4f9 0%, #dce9f5 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; color: #0b2b4a; }
+
+    .auth-container {
+      max-width: 1180px; width: 100%;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(12px);
+      border-radius: 2.5rem;
+      box-shadow: 0 30px 60px -15px rgba(0, 20, 40, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      display: grid; grid-template-columns: 1fr 1.15fr;
+      overflow: hidden; min-height: 700px;
+    }
+
+    .auth-left {
+      background: linear-gradient(160deg, #0a3e5e 0%, #0d4f78 55%, #0f5f8f 100%);
+      padding: 3rem 2.5rem; color: #e5f1fa;
+      display: flex; flex-direction: column; justify-content: space-between;
+      position: relative; overflow: hidden;
+    }
+    .auth-left::before { content: ''; position: absolute; top: -70px; right: -70px; width: 240px; height: 240px; background: rgba(255,255,255,0.05); border-radius: 50%; }
+    .auth-left::after { content: ''; position: absolute; bottom: -90px; left: -50px; width: 300px; height: 300px; background: rgba(255,255,255,0.04); border-radius: 50%; }
+
+    .auth-brand { display: flex; align-items: center; gap: 12px; position: relative; z-index: 2; }
+    .auth-brand .logo { width: 52px; height: 52px; background: rgba(255,255,255,0.15); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.7rem; color: #a5d8ff; box-shadow: 0 8px 20px -8px #00000060; }
+    .auth-brand h1 { font-size: 1.35rem; font-weight: 700; line-height: 1.2; }
+    .auth-brand span { font-size: 0.72rem; color: #a5c9e0; display: block; font-weight: 400; margin-top: 3px; }
+
+    .auth-hero { position: relative; z-index: 2; margin: 2.5rem 0; }
+    .auth-hero h2 { font-size: 2rem; font-weight: 800; line-height: 1.25; margin-bottom: 1rem; letter-spacing: -0.025em; }
+    .auth-hero h2 i { color: #7dd3fc; }
+    .auth-hero p { font-size: 0.9rem; color: #b8d8ec; line-height: 1.6; max-width: 400px; }
+
+    .auth-features { list-style: none; position: relative; z-index: 2; display: flex; flex-direction: column; gap: 0.85rem; }
+    .auth-features li { display: flex; align-items: center; gap: 12px; font-size: 0.84rem; color: #c9e2f2; font-weight: 500; }
+    .auth-features li i { width: 22px; color: #7dd3fc; font-size: 0.9rem; text-align: center; }
+
+    .domain-badge { margin-top: 1.5rem; background: rgba(125,211,252,0.12); border: 1px solid rgba(125,211,252,0.3); padding: 0.65rem 1rem; border-radius: 12px; font-size: 0.78rem; font-weight: 600; color: #7dd3fc; display: flex; align-items: center; gap: 8px; position: relative; z-index: 2; }
+
+    .auth-right { padding: 2.2rem 2.5rem 2.5rem; overflow-y: auto; max-height: 90vh; display: flex; flex-direction: column; }
+    .auth-right::-webkit-scrollbar { width: 6px; }
+    .auth-right::-webkit-scrollbar-thumb { background: #c4def0; border-radius: 10px; }
+
+    /* ===== ROLE TABS — always show labels ===== */
+    .role-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; background: #eef6fc; padding: 0.4rem; border-radius: 14px; margin-bottom: 1.2rem; border: 1px solid #d9ebf7; }
+    .role-tab { padding: 0.65rem 0.35rem; border-radius: 10px; text-align: center; font-size: 0.72rem; font-weight: 700; color: #5a89a6; cursor: pointer; transition: 0.18s; border: none; background: transparent; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 5px; white-space: nowrap; }
+    .role-tab i { font-size: 0.9rem; flex-shrink: 0; }
+    .role-tab span { display: inline; }
+    .role-tab.active { background: white; color: #0a3e5e; box-shadow: 0 6px 14px -6px #0b4b6e40; }
+    .role-tab.active[data-role="student"] { color: #0f7db6; }
+    .role-tab.active[data-role="teacher"] { color: #7c3aed; }
+    .role-tab.active[data-role="hod"] { color: #0d9488; }
+    .role-tab.active[data-role="security"] { color: #dc2626; }
+    .role-tab:hover:not(.active) { color: #0f7db6; background: rgba(255,255,255,0.7); }
+
+    .mode-tabs { display: flex; gap: 0; border-bottom: 2px solid #e8f2fa; margin-bottom: 1.5rem; }
+    .mode-tab { flex: 1; padding: 0.75rem 0.5rem; background: transparent; border: none; font-family: inherit; font-size: 0.86rem; font-weight: 600; color: #7ba3bd; cursor: pointer; position: relative; transition: 0.18s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .mode-tab.active { color: #0a3e5e; font-weight: 700; }
+    .mode-tab.active::after { content: ''; position: absolute; bottom: -2px; left: 0; width: 100%; height: 3px; background: #0f7db6; border-radius: 3px 3px 0 0; }
+    .mode-tab:hover:not(.active) { color: #0f7db6; }
+
+    .form-panel { display: none; animation: fadeIn 0.3s ease; }
+    .form-panel.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    .form-header { margin-bottom: 1.3rem; }
+    .form-header h3 { font-size: 1.25rem; font-weight: 700; color: #0a3e5e; letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px; }
+    .form-header h3 i { color: #0f7db6; font-size: 1.05rem; }
+    .form-header p { font-size: 0.78rem; color: #5a89a6; margin-top: 5px; }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
+    .form-group { margin-bottom: 0.9rem; }
+    .form-group label { font-size: 0.72rem; font-weight: 600; color: #0a3e5e; display: block; margin-bottom: 5px; }
+    .form-group label .required { color: #dc2626; margin-left: 2px; }
+
+    .input-wrapper { position: relative; }
+    .input-wrapper i.prefix { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: #7ba3bd; font-size: 0.82rem; pointer-events: none; }
+    .input-wrapper input, .input-wrapper select, .input-wrapper textarea { width: 100%; padding: 0.68rem 0.9rem 0.68rem 2.4rem; border: 1.5px solid #d9ebf7; border-radius: 11px; font-family: inherit; font-size: 0.83rem; color: #0b2b4a; background: #fbfeff; outline: none; transition: 0.15s; }
+    .input-wrapper textarea { min-height: 70px; resize: vertical; }
+    .input-wrapper input:focus, .input-wrapper select:focus, .input-wrapper textarea:focus { border-color: #0f7db6; box-shadow: 0 0 0 4px #0f7db620; background: white; }
+
+    .section-divider { font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.08em; color: #6b93ab; font-weight: 700; margin: 1rem 0 0.65rem; padding-bottom: 5px; border-bottom: 1px solid #e8f2fa; display: flex; align-items: center; gap: 6px; }
+    .section-divider i { color: #0f7db6; font-size: 0.68rem; }
+
+    .photo-upload-box {
+      display: flex; align-items: center; gap: 1rem;
+      padding: 0.9rem 1rem; background: #f7fbfe;
+      border: 1.5px dashed #c4def0; border-radius: 12px; flex-wrap: wrap;
+    }
+    .photo-preview {
+      width: 80px; height: 80px; border-radius: 50%;
+      background: linear-gradient(135deg, #e5f1fa, #c4def0);
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden; flex-shrink: 0;
+      border: 3px solid white; box-shadow: 0 6px 16px -6px #0f7db650;
+    }
+    .photo-preview i { font-size: 2rem; color: #7ba3bd; }
+    .photo-preview img { width: 100%; height: 100%; object-fit: cover; }
+    .photo-upload-info { flex: 1; min-width: 160px; }
+    .photo-upload-info input[type="file"] { font-size: 0.78rem; padding: 0.4rem 0; }
+    .photo-upload-info p { font-size: 0.66rem; color: #7ba3bd; margin-top: 4px; }
+
+    .btn-submit { width: 100%; padding: 0.85rem; background: linear-gradient(135deg, #0f7db6, #0a6291); color: white; border: none; border-radius: 12px; font-family: inherit; font-size: 0.9rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 10px 22px -8px #0f7db680; transition: 0.15s; margin-top: 1rem; }
+    .btn-submit:hover:not(:disabled) { transform: translateY(-2px); }
+    .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .form-panel[data-role="teacher"] .btn-submit { background: linear-gradient(135deg, #7c3aed, #5b21b6); }
+    .form-panel[data-role="hod"] .btn-submit { background: linear-gradient(135deg, #0d9488, #0f766e); }
+    .form-panel[data-role="security"] .btn-submit { background: linear-gradient(135deg, #dc2626, #b91c1c); }
+
+    .alert-box { padding: 0.75rem 1rem; border-radius: 12px; font-size: 0.78rem; font-weight: 500; display: none; align-items: center; gap: 8px; margin-bottom: 1rem; }
+    .alert-box.show { display: flex; }
+    .alert-box.error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+    .alert-box.success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .alert-box.info { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+
+    .form-footer-text { text-align: center; margin-top: 1rem; font-size: 0.78rem; color: #4f7b96; }
+    .form-footer-text a { color: #0f7db6; font-weight: 700; text-decoration: none; cursor: pointer; }
+    .form-footer-text a:hover { text-decoration: underline; }
+
+    @media (max-width: 900px) {
+      .auth-container { grid-template-columns: 1fr; max-width: 540px; min-height: auto; }
+      .auth-left { padding: 2rem 1.8rem; min-height: auto; }
+      .auth-hero h2 { font-size: 1.5rem; }
+      .auth-features, .domain-badge { display: none; }
+      .auth-right { padding: 1.8rem; max-height: none; }
+    }
+    @media (max-width: 500px) {
+      .auth-container { border-radius: 1.5rem; }
+      .auth-right { padding: 1.3rem; }
+      .form-row { grid-template-columns: 1fr; }
+      .role-tab { font-size: 0.62rem; padding: 0.55rem 0.2rem; gap: 3px; flex-direction: column; }
+      .role-tab i { font-size: 1rem; }
+      .role-tab span { display: inline; font-size: 0.6rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-container">
+    <!-- LEFT PANEL -->
+    <div class="auth-left">
+      <div class="auth-brand">
+        <div class="logo"><i class="fas fa-graduation-cap"></i></div>
+        <div>
+          <h1>College Permission</h1>
+          <span>Digital Student Verification System</span>
+        </div>
+      </div>
+
+      <div class="auth-hero">
+        <h2><i class="fas fa-shield-alt"></i> From Request to Verified Campus Exit.</h2>
+        <p>Register with your college email, get verified by Teacher and HOD, receive a digital QR permission slip — all in one place.</p>
+      </div>
+
+      <ul class="auth-features">
+        <li><i class="fas fa-check-circle"></i> 4 role-based portals</li>
+        <li><i class="fas fa-check-circle"></i> Two-level approval (Teacher + HOD)</li>
+        <li><i class="fas fa-check-circle"></i> Parent verification enforced</li>
+        <li><i class="fas fa-check-circle"></i> QR-based digital permission slip</li>
+        <li><i class="fas fa-check-circle"></i> Security gate verification</li>
+      </ul>
+
+      <div class="domain-badge">
+        <i class="fas fa-lock"></i> Only @bvcits.edu.in domain allowed
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="auth-right">
+      <!-- Role tabs -->
+      <div class="role-tabs">
+        <button type="button" class="role-tab active" data-role="student" onclick="switchRole('student', this)">
+          <i class="fas fa-user-graduate"></i> <span>Student</span>
+        </button>
+        <button type="button" class="role-tab" data-role="teacher" onclick="switchRole('teacher', this)">
+          <i class="fas fa-chalkboard-teacher"></i> <span>Teacher</span>
+        </button>
+        <button type="button" class="role-tab" data-role="hod" onclick="switchRole('hod', this)">
+          <i class="fas fa-user-tie"></i> <span>HOD</span>
+        </button>
+        <button type="button" class="role-tab" data-role="security" onclick="switchRole('security', this)">
+          <i class="fas fa-shield-alt"></i> <span>Security</span>
+        </button>
+      </div>
+
+      <div class="alert-box" id="alertBox">
+        <i class="fas fa-info-circle" id="alertIcon"></i>
+        <span id="alertMessage"></span>
+      </div>
+
+      <!-- ============ STUDENT PANEL ============ -->
+      <div class="role-panel" data-role="student" id="panel-student">
+        <div class="mode-tabs">
+          <button type="button" class="mode-tab active" onclick="switchMode('student', 'login', this)"><i class="fas fa-sign-in-alt"></i> Login</button>
+          <button type="button" class="mode-tab" onclick="switchMode('student', 'register', this)"><i class="fas fa-user-plus"></i> Register</button>
+        </div>
+
+        <div class="form-panel active" data-role="student" data-mode="login" id="student-login">
+          <div class="form-header">
+            <h3><i class="fas fa-sign-in-alt"></i> Student Login</h3>
+            <p>Login with your register number and password.</p>
+          </div>
+          <form onsubmit="handleLogin(event, 'student')">
+            <div class="form-group">
+              <label>Register Number <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <i class="fas fa-id-card prefix"></i>
+                <input type="text" id="student-login-regNo" placeholder="e.g., 24A91A0512" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Password <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <i class="fas fa-lock prefix"></i>
+                <input type="password" id="student-login-password" placeholder="Enter your password" required>
+              </div>
+            </div>
+            <button type="submit" class="btn-submit"><i class="fas fa-sign-in-alt"></i> Login to Dashboard</button>
+          </form>
+          <div class="form-footer-text">
+            Don't have an account? <a onclick="switchMode('student', 'register', document.querySelector('#panel-student .mode-tab:nth-child(2)'))">Register here</a>
+          </div>
+        </div>
+
+        <div class="form-panel" data-role="student" data-mode="register" id="student-register">
+          <div class="form-header">
+            <h3><i class="fas fa-user-plus"></i> Student Registration</h3>
+            <p>Fill your details. Only @bvcits.edu.in email allowed.</p>
+          </div>
+          <form onsubmit="handleRegister(event, 'student')">
+            <div class="section-divider"><i class="fas fa-camera"></i> Profile Photo</div>
+            <div class="photo-upload-box">
+              <div class="photo-preview" id="regPhotoPreview"><i class="fas fa-user"></i></div>
+              <div class="photo-upload-info">
+                <input type="file" id="reg-photo" accept="image/*" onchange="previewRegPhoto(event)">
+                <p><i class="fas fa-info-circle"></i> JPG/PNG · Max 500KB · Photo appears on slip & dashboards.</p>
+              </div>
+            </div>
+
+            <div class="section-divider"><i class="fas fa-graduation-cap"></i> Academic Details</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Register Number <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-id-card prefix"></i><input type="text" id="reg-regNo" placeholder="24A91A0512" required></div>
+              </div>
+              <div class="form-group">
+                <label>Branch <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-microchip prefix"></i>
+                  <select id="reg-branch" required>
+                    <option value="">Select Branch</option>
+                    <option value="CSE">CSE</option>
+                    <option value="ECE">ECE</option>
+                    <option value="AIML">AIML</option>
+                    <option value="AIDS">AIDS</option>
+                    <option value="IT">IT</option>
+                    <option value="CIVIL">CIVIL</option>
+                    <option value="EEE">EEE</option>
+                    <option value="MECH">MECH</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Section <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-users prefix"></i>
+                  <select id="reg-section" required>
+                    <option value="">Select Section</option>
+                    <option value="A">A</option>
+                    <option value="B">B</option>
+                    <option value="C">C</option>
+                    <option value="No Section">No Section</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Year <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-calendar prefix"></i>
+                  <select id="reg-year" required>
+                    <option value="">Select Year</option>
+                    <option value="I Year">I Year</option>
+                    <option value="II Year">II Year</option>
+                    <option value="III Year">III Year</option>
+                    <option value="IV Year">IV Year</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Semester <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-book prefix"></i>
+                  <select id="reg-semester" required>
+                    <option value="">Select Semester</option>
+                    <option value="1-1">1-1</option>
+                    <option value="1-2">1-2</option>
+                    <option value="2-1">2-1</option>
+                    <option value="2-2">2-2</option>
+                    <option value="3-1">3-1</option>
+                    <option value="3-2">3-2</option>
+                    <option value="4-1">4-1</option>
+                    <option value="4-2">4-2</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Full Name <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-user prefix"></i><input type="text" id="reg-fullName" placeholder="e.g., Manisri Vithanala" required></div>
+              </div>
+            </div>
+
+            <div class="section-divider"><i class="fas fa-address-book"></i> Contact Details</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>College Email <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-envelope prefix"></i><input type="email" id="reg-email" placeholder="24A91A0512@bvcits.edu.in" required></div>
+                <div class="domain-hint" id="reg-email-hint" style="font-size:0.66rem; color:#0f7db6; margin-top:4px;"><i class="fas fa-info-circle"></i> Must end with @bvcits.edu.in</div>
+              </div>
+              <div class="form-group">
+                <label>Mobile Number <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-phone prefix"></i><input type="tel" id="reg-mobile" placeholder="9876543210" pattern="[0-9]{10}" required></div>
+              </div>
+            </div>
+
+            <div class="section-divider"><i class="fas fa-user-friends"></i> Parent / Guardian Details</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Parent Name <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-user-friends prefix"></i><input type="text" id="reg-parentName" placeholder="e.g., Ramesh" required></div>
+              </div>
+              <div class="form-group">
+                <label>Parent Mobile <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-mobile-alt prefix"></i><input type="tel" id="reg-parentMobile" placeholder="9876543210" pattern="[0-9]{10}" required></div>
+              </div>
+            </div>
+
+            <div class="section-divider"><i class="fas fa-lock"></i> Account Security</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Password <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-lock prefix"></i><input type="password" id="reg-password" placeholder="Min 6 chars" minlength="6" required></div>
+              </div>
+              <div class="form-group">
+                <label>Confirm Password <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-lock prefix"></i><input type="password" id="reg-confirmPassword" placeholder="Re-enter" minlength="6" required></div>
+              </div>
+            </div>
+            <button type="submit" class="btn-submit"><i class="fas fa-user-plus"></i> Register & Continue</button>
+          </form>
+          <div class="form-footer-text">
+            Already registered? <a onclick="switchMode('student', 'login', document.querySelector('#panel-student .mode-tab:nth-child(1)'))">Login here</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ TEACHER PANEL ============ -->
+      <div class="role-panel" data-role="teacher" id="panel-teacher" style="display:none;">
+        <div class="mode-tabs">
+          <button type="button" class="mode-tab active" onclick="switchMode('teacher', 'login', this)"><i class="fas fa-sign-in-alt"></i> Login</button>
+          <button type="button" class="mode-tab" onclick="switchMode('teacher', 'register', this)"><i class="fas fa-user-plus"></i> Register</button>
+        </div>
+
+        <div class="form-panel active" data-role="teacher" data-mode="login" id="teacher-login">
+          <div class="form-header">
+            <h3><i class="fas fa-chalkboard-teacher"></i> Teacher Login</h3>
+            <p>Login with your Teacher ID and password.</p>
+          </div>
+          <form onsubmit="handleLogin(event, 'teacher')">
+            <div class="form-group">
+              <label>Teacher ID <span class="required">*</span></label>
+              <div class="input-wrapper"><i class="fas fa-id-badge prefix"></i><input type="text" id="teacher-login-id" placeholder="e.g., TCH-101" required></div>
+            </div>
+            <div class="form-group">
+              <label>Password <span class="required">*</span></label>
+              <div class="input-wrapper"><i class="fas fa-lock prefix"></i><input type="password" id="teacher-login-password" placeholder="Enter password" required></div>
+            </div>
+            <button type="submit" class="btn-submit"><i class="fas fa-sign-in-alt"></i> Login to Dashboard</button>
+          </form>
+          <div class="form-footer-text">
+            Don't have an account? <a onclick="switchMode('teacher', 'register', document.querySelector('#panel-teacher .mode-tab:nth-child(2)'))">Register here</a>
+          </div>
+        </div>
+
+        <div class="form-panel" data-role="teacher" data-mode="register" id="teacher-register">
+          <div class="form-header">
+            <h3><i class="fas fa-user-plus"></i> Teacher Registration</h3>
+            <p>Register with your Teacher ID and college email.</p>
+          </div>
+          <form onsubmit="handleRegister(event, 'teacher')">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Teacher ID <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-id-badge prefix"></i><input type="text" id="treg-id" placeholder="TCH-101" required></div>
+              </div>
+              <div class="form-group">
+                <label>Full Name <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-user prefix"></i><input type="text" id="treg-fullName" placeholder="Dr. S. Ramesh" required></div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Department (Branch) <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-building prefix"></i>
+                  <select id="treg-department" required>
+                    <option value="">Select Department</option>
+                    <option value="CSE">CSE</option>
+                    <option value="ECE">ECE</option>
+                    <option value="AIML">AIML</option>
+                    <option value="AIDS">AIDS</option>
+                    <option value="IT">IT</option>
+                    <option value="CIVIL">CIVIL</option>
+                    <option value="EEE">EEE</option>
+                    <option value="MECH">MECH</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Assigned Class <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-users prefix"></i><input type="text" id="treg-section" placeholder="AIML - III Year - A" required></div>
+                <p style="font-size:0.66rem; color:#7c3aed; margin-top:4px; font-weight:600;"><i class="fas fa-info-circle"></i> Format: Branch - Year - Section (e.g., AIML - III Year - A)</p>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>College Email <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-envelope prefix"></i><input type="email" id="treg-email" placeholder="teacher@bvcits.edu.in" required></div>
+              </div>
+              <div class="form-group">
+                <label>Mobile <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-phone prefix"></i><input type="tel" id="treg-mobile" placeholder="9876543210" pattern="[0-9]{10}" required></div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Password <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-lock prefix"></i><input type="password" id="treg-password" placeholder="Min 6 chars" minlength="6" required></div>
+              </div>
+              <div class="form-group">
+                <label>Confirm Password <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-lock prefix"></i><input type="password" id="treg-confirmPassword" placeholder="Re-enter" minlength="6" required></div>
+              </div>
+            </div>
+            <button type="submit" class="btn-submit"><i class="fas fa-user-plus"></i> Register & Continue</button>
+          </form>
+          <div class="form-footer-text">
+            Already registered? <a onclick="switchMode('teacher', 'login', document.querySelector('#panel-teacher .mode-tab:nth-child(1)'))">Login here</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ HOD PANEL ============ -->
+      <div class="role-panel" data-role="hod" id="panel-hod" style="display:none;">
+        <div class="mode-tabs">
+          <button type="button" class="mode-tab active" onclick="switchMode('hod', 'login', this)"><i class="fas fa-sign-in-alt"></i> Login</button>
+          <button type="button" class="mode-tab" onclick="switchMode('hod', 'register', this)"><i class="fas fa-user-plus"></i> Register</button>
+        </div>
+
+        <div class="form-panel active" data-role="hod" data-mode="login" id="hod-login">
+          <div class="form-header">
+            <h3><i class="fas fa-user-tie"></i> HOD Login</h3>
+            <p>Login with your HOD ID and password.</p>
+          </div>
+          <form onsubmit="handleLogin(event, 'hod')">
+            <div class="form-group">
+              <label>HOD ID <span class="required">*</span></label>
+              <div class="input-wrapper"><i class="fas fa-id-badge prefix"></i><input type="text" id="hod-login-id" placeholder="e.g., HOD-AIML" required></div>
+            </div>
+            <div class="form-group">
+              <label>Password <span class="required">*</span></label>
+              <div class="input-wrapper"><i class="fas fa-lock prefix"></i><input type="password" id="hod-login-password" placeholder="Enter password" required></div>
+            </div>
+            <button type="submit" class="btn-submit"><i class="fas fa-sign-in-alt"></i> Login to Dashboard</button>
+          </form>
+          <div class="form-footer-text">
+            Don't have an account? <a onclick="switchMode('hod', 'register', document.querySelector('#panel-hod .mode-tab:nth-child(2)'))">Register here</a>
+          </div>
+        </div>
+
+        <div class="form-panel" data-role="hod" data-mode="register" id="hod-register">
+          <div class="form-header">
+            <h3><i class="fas fa-user-plus"></i> HOD Registration</h3>
+            <p>Register with your HOD ID and college email.</p>
+          </div>
+          <form onsubmit="handleRegister(event, 'hod')">
+            <div class="form-row">
+              <div class="form-group">
+                <label>HOD ID <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-id-badge prefix"></i><input type="text" id="hreg-id" placeholder="HOD-AIML" required></div>
+              </div>
+              <div class="form-group">
+                <label>Full Name <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-user prefix"></i><input type="text" id="hreg-fullName" placeholder="Dr. K. Prasad" required></div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Department <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-building prefix"></i>
+                  <select id="hreg-department" required>
+                    <option value="">Select Department</option>
+                    <option value="CSE">CSE</option>
+                    <option value="ECE">ECE</option>
+                    <option value="AIML">AIML</option>
+                    <option value="AIDS">AIDS</option>
+                    <option value="IT">IT</option>
+                    <option value="CIVIL">CIVIL</option>
+                    <option value="EEE">EEE</option>
+                    <option value="MECH">MECH</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>College Email <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-envelope prefix"></i><input type="email" id="hreg-email" placeholder="hod@bvcits.edu.in" required></div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Mobile <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-phone prefix"></i><input type="tel" id="hreg-mobile" placeholder="9876543210" pattern="[0-9]{10}" required></div>
+              </div>
+              <div class="form-group">
+                <label>Password <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-lock prefix"></i><input type="password" id="hreg-password" placeholder="Min 6 chars" minlength="6" required></div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Confirm Password <span class="required">*</span></label>
+              <div class="input-wrapper"><i class="fas fa-lock prefix"></i><input type="password" id="hreg-confirmPassword" placeholder="Re-enter password" minlength="6" required></div>
+            </div>
+            <button type="submit" class="btn-submit"><i class="fas fa-user-plus"></i> Register & Continue</button>
+          </form>
+          <div class="form-footer-text">
+            Already registered? <a onclick="switchMode('hod', 'login', document.querySelector('#panel-hod .mode-tab:nth-child(1)'))">Login here</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ SECURITY PANEL ============ -->
+      <div class="role-panel" data-role="security" id="panel-security" style="display:none;">
+        <div class="mode-tabs">
+          <button type="button" class="mode-tab active" onclick="switchMode('security', 'login', this)"><i class="fas fa-sign-in-alt"></i> Login</button>
+          <button type="button" class="mode-tab" onclick="switchMode('security', 'register', this)"><i class="fas fa-user-plus"></i> Register</button>
+        </div>
+
+        <div class="form-panel active" data-role="security" data-mode="login" id="security-login">
+          <div class="form-header">
+            <h3><i class="fas fa-shield-alt"></i> Security Login</h3>
+            <p>Login with your Security ID and password.</p>
+          </div>
+          <form onsubmit="handleLogin(event, 'security')">
+            <div class="form-group">
+              <label>Security ID <span class="required">*</span></label>
+              <div class="input-wrapper"><i class="fas fa-id-badge prefix"></i><input type="text" id="security-login-id" placeholder="e.g., SEC-01" required></div>
+            </div>
+            <div class="form-group">
+              <label>Password <span class="required">*</span></label>
+              <div class="input-wrapper"><i class="fas fa-lock prefix"></i><input type="password" id="security-login-password" placeholder="Enter password" required></div>
+            </div>
+            <button type="submit" class="btn-submit"><i class="fas fa-sign-in-alt"></i> Login to Gate Dashboard</button>
+          </form>
+          <div class="form-footer-text">
+            Don't have an account? <a onclick="switchMode('security', 'register', document.querySelector('#panel-security .mode-tab:nth-child(2)'))">Register here</a>
+          </div>
+        </div>
+
+        <div class="form-panel" data-role="security" data-mode="register" id="security-register">
+          <div class="form-header">
+            <h3><i class="fas fa-user-plus"></i> Security Registration</h3>
+            <p>Register with your Security ID.</p>
+          </div>
+          <form onsubmit="handleRegister(event, 'security')">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Security ID <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-id-badge prefix"></i><input type="text" id="sreg-id" placeholder="SEC-01" required></div>
+              </div>
+              <div class="form-group">
+                <label>Full Name <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-user prefix"></i><input type="text" id="sreg-fullName" placeholder="Security Guard Name" required></div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Gate / Post <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-door-open prefix"></i>
+                  <select id="sreg-gate" required>
+                    <option value="">Select Gate</option>
+                    <option value="Main Gate">Main Gate</option>
+                    <option value="Back Gate">Back Gate</option>
+                    <option value="Hostel Gate">Hostel Gate</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Mobile <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-phone prefix"></i><input type="tel" id="sreg-mobile" placeholder="9876543210" pattern="[0-9]{10}" required></div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Password <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-lock prefix"></i><input type="password" id="sreg-password" placeholder="Min 6 chars" minlength="6" required></div>
+              </div>
+              <div class="form-group">
+                <label>Confirm Password <span class="required">*</span></label>
+                <div class="input-wrapper"><i class="fas fa-lock prefix"></i><input type="password" id="sreg-confirmPassword" placeholder="Re-enter" minlength="6" required></div>
+              </div>
+            </div>
+            <button type="submit" class="btn-submit"><i class="fas fa-user-plus"></i> Register & Continue</button>
+          </form>
+          <div class="form-footer-text">
+            Already registered? <a onclick="switchMode('security', 'login', document.querySelector('#panel-security .mode-tab:nth-child(1)'))">Login here</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ================================================================
+    // CONFIG
+    // ================================================================
+    const ALLOWED_DOMAIN = '@bvcits.edu.in';
+
+    const roleConfig = {
+      student: { storageKey: 'cps_students', dashboard: 'student/dashboard.html' },
+      teacher: { storageKey: 'cps_teachers', dashboard: 'teacher/dashboard.html' },
+      hod: { storageKey: 'cps_hods', dashboard: 'hod/dashboard.html' },
+      security: { storageKey: 'cps_security', dashboard: 'security/dashboard.html' }
+    };
+
+    let regPhotoBase64 = null;
+
+    // ================================================================
+    // PHOTO PREVIEW
+    // ================================================================
+    function previewRegPhoto(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      if (file.size > 500 * 1024) {
+        showAlert('Photo size must be less than 500KB.', 'error');
+        event.target.value = '';
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        showAlert('Please upload an image file (JPG/PNG).', 'error');
+        event.target.value = '';
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        regPhotoBase64 = e.target.result;
+        const preview = document.getElementById('regPhotoPreview');
+        preview.innerHTML = `<img src="${regPhotoBase64}" alt="Preview">`;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // ================================================================
+    // TAB SWITCHING
+    // ================================================================
+    function switchRole(role, btn) {
+      document.querySelectorAll('.role-tab').forEach(t => t.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      document.querySelectorAll('.role-panel').forEach(p => p.style.display = 'none');
+      const panel = document.getElementById('panel-' + role);
+      if (panel) panel.style.display = 'block';
+      hideAlert();
+    }
+
+    function switchMode(role, mode, btn) {
+      const panel = document.getElementById('panel-' + role);
+      if (!panel) return;
+      panel.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      panel.querySelectorAll('.form-panel').forEach(f => f.classList.remove('active'));
+      const targetForm = panel.querySelector(`.form-panel[data-mode="${mode}"]`);
+      if (targetForm) targetForm.classList.add('active');
+      hideAlert();
+    }
+
+    // ================================================================
+    // ALERTS
+    // ================================================================
+    function showAlert(message, type) {
+      const box = document.getElementById('alertBox');
+      const icon = document.getElementById('alertIcon');
+      const msg = document.getElementById('alertMessage');
+      box.className = 'alert-box show ' + type;
+      icon.className = type === 'error' ? 'fas fa-exclamation-circle' :
+                       type === 'success' ? 'fas fa-check-circle' : 'fas fa-info-circle';
+      msg.textContent = message;
+      box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function hideAlert() { document.getElementById('alertBox').className = 'alert-box'; }
+
+    function validateDomain(email) {
+      return email.trim().toLowerCase().endsWith(ALLOWED_DOMAIN);
+    }
+
+    // ================================================================
+    // REGISTER
+    // ================================================================
+    function handleRegister(e, role) {
+      e.preventDefault();
+      const cfg = roleConfig[role];
+      let userData = {};
+
+      // STUDENT
+      if (role === 'student') {
+        userData = {
+          regNo: document.getElementById('reg-regNo').value.trim(),
+          branch: document.getElementById('reg-branch').value,
+          section: document.getElementById('reg-section').value,
+          year: document.getElementById('reg-year').value,
+          semester: document.getElementById('reg-semester').value,
+          fullName: document.getElementById('reg-fullName').value.trim(),
+          email: document.getElementById('reg-email').value.trim().toLowerCase(),
+          mobile: document.getElementById('reg-mobile').value.trim(),
+          parentName: document.getElementById('reg-parentName').value.trim(),
+          parentMobile: document.getElementById('reg-parentMobile').value.trim(),
+          photo: regPhotoBase64,
+          password: document.getElementById('reg-password').value,
+          confirm: document.getElementById('reg-confirmPassword').value,
+          role: 'student'
+        };
+
+        if (!validateDomain(userData.email)) { showAlert('Only @bvcits.edu.in email allowed.', 'error'); return; }
+        if (userData.password !== userData.confirm) { showAlert('Passwords do not match.', 'error'); return; }
+        if (!/^\d{10}$/.test(userData.mobile) || !/^\d{10}$/.test(userData.parentMobile)) { showAlert('Mobile must be 10 digits.', 'error'); return; }
+        if (!regPhotoBase64) { showAlert('Please upload a profile photo.', 'error'); return; }
+
+        const existing = JSON.parse(localStorage.getItem(cfg.storageKey) || '[]');
+        if (existing.find(s => s.regNo === userData.regNo)) { showAlert('Register number already exists. Please login.', 'error'); return; }
+
+        delete userData.confirm;
+        userData.registeredAt = new Date().toISOString();
+        existing.push(userData);
+        localStorage.setItem(cfg.storageKey, JSON.stringify(existing));
+
+        const pending = JSON.parse(localStorage.getItem('cps_pendingRegistrations') || '[]');
+        if (!pending.find(p => p.regNo === userData.regNo)) {
+          pending.push({
+            regNo: userData.regNo, fullName: userData.fullName, branch: userData.branch,
+            section: userData.section, year: userData.year, email: userData.email,
+            mobile: userData.mobile, parentName: userData.parentName, parentMobile: userData.parentMobile,
+            photo: userData.photo,
+            submittedAt: new Date().toISOString(), status: 'pending_teacher_verification'
+          });
+          localStorage.setItem('cps_pendingRegistrations', JSON.stringify(pending));
+        }
+
+        regPhotoBase64 = null;
+        document.getElementById('regPhotoPreview').innerHTML = '<i class="fas fa-user"></i>';
+        console.log('✅ Student registered:', userData.fullName, userData.regNo);
+      }
+
+      // TEACHER
+      if (role === 'teacher') {
+        userData = {
+          teacherId: document.getElementById('treg-id').value.trim(),
+          fullName: document.getElementById('treg-fullName').value.trim(),
+          department: document.getElementById('treg-department').value,
+          section: document.getElementById('treg-section').value.trim(),
+          email: document.getElementById('treg-email').value.trim().toLowerCase(),
+          mobile: document.getElementById('treg-mobile').value.trim(),
+          password: document.getElementById('treg-password').value,
+          confirm: document.getElementById('treg-confirmPassword').value,
+          role: 'teacher'
+        };
+        if (!validateDomain(userData.email)) { showAlert('Only @bvcits.edu.in email allowed.', 'error'); return; }
+        if (userData.password !== userData.confirm) { showAlert('Passwords do not match.', 'error'); return; }
+
+        const existing = JSON.parse(localStorage.getItem(cfg.storageKey) || '[]');
+        if (existing.find(t => t.teacherId === userData.teacherId)) { showAlert('Teacher ID already exists.', 'error'); return; }
+
+        delete userData.confirm;
+        userData.registeredAt = new Date().toISOString();
+        existing.push(userData);
+        localStorage.setItem(cfg.storageKey, JSON.stringify(existing));
+        console.log('✅ Teacher registered:', userData.fullName);
+      }
+
+      // HOD
+      if (role === 'hod') {
+        userData = {
+          hodId: document.getElementById('hreg-id').value.trim(),
+          fullName: document.getElementById('hreg-fullName').value.trim(),
+          department: document.getElementById('hreg-department').value,
+          email: document.getElementById('hreg-email').value.trim().toLowerCase(),
+          mobile: document.getElementById('hreg-mobile').value.trim(),
+          password: document.getElementById('hreg-password').value,
+          confirm: document.getElementById('hreg-confirmPassword').value,
+          role: 'hod'
+        };
+        if (!validateDomain(userData.email)) { showAlert('Only @bvcits.edu.in email allowed.', 'error'); return; }
+        if (userData.password !== userData.confirm) { showAlert('Passwords do not match.', 'error'); return; }
+
+        const existing = JSON.parse(localStorage.getItem(cfg.storageKey) || '[]');
+        if (existing.find(h => h.hodId === userData.hodId)) { showAlert('HOD ID already exists.', 'error'); return; }
+
+        delete userData.confirm;
+        userData.registeredAt = new Date().toISOString();
+        existing.push(userData);
+        localStorage.setItem(cfg.storageKey, JSON.stringify(existing));
+        console.log('✅ HOD registered:', userData.fullName);
+      }
+
+      // SECURITY
+      if (role === 'security') {
+        userData = {
+          securityId: document.getElementById('sreg-id').value.trim(),
+          fullName: document.getElementById('sreg-fullName').value.trim(),
+          gate: document.getElementById('sreg-gate').value,
+          mobile: document.getElementById('sreg-mobile').value.trim(),
+          password: document.getElementById('sreg-password').value,
+          confirm: document.getElementById('sreg-confirmPassword').value,
+          role: 'security'
+        };
+        if (userData.password !== userData.confirm) { showAlert('Passwords do not match.', 'error'); return; }
+
+        const existing = JSON.parse(localStorage.getItem(cfg.storageKey) || '[]');
+        if (existing.find(s => s.securityId === userData.securityId)) { showAlert('Security ID already exists.', 'error'); return; }
+
+        delete userData.confirm;
+        userData.registeredAt = new Date().toISOString();
+        existing.push(userData);
+        localStorage.setItem(cfg.storageKey, JSON.stringify(existing));
+        console.log('✅ Security registered:', userData.fullName);
+      }
+
+      showAlert('Registration successful! Please login.', 'success');
+
+      setTimeout(() => {
+        const panel = document.getElementById('panel-' + role);
+        const loginTab = panel.querySelector('.mode-tab:nth-child(1)');
+        switchMode(role, 'login', loginTab);
+      }, 1500);
+    }
+
+    // ================================================================
+    // LOGIN
+    // ================================================================
+    function handleLogin(e, role) {
+      e.preventDefault();
+      const cfg = roleConfig[role];
+      let id, password;
+
+      if (role === 'student') {
+        id = document.getElementById('student-login-regNo').value.trim();
+        password = document.getElementById('student-login-password').value;
+      }
+      if (role === 'teacher') {
+        id = document.getElementById('teacher-login-id').value.trim();
+        password = document.getElementById('teacher-login-password').value;
+      }
+      if (role === 'hod') {
+        id = document.getElementById('hod-login-id').value.trim();
+        password = document.getElementById('hod-login-password').value;
+      }
+      if (role === 'security') {
+        id = document.getElementById('security-login-id').value.trim();
+        password = document.getElementById('security-login-password').value;
+      }
+
+      const users = JSON.parse(localStorage.getItem(cfg.storageKey) || '[]');
+
+      if (users.length === 0) {
+        showAlert('No registered ' + role + ' found. Please register first.', 'error');
+        return;
+      }
+
+      let user;
+      if (role === 'student') user = users.find(u => u.regNo === id);
+      if (role === 'teacher') user = users.find(u => u.teacherId === id);
+      if (role === 'hod') user = users.find(u => u.hodId === id);
+      if (role === 'security') user = users.find(u => u.securityId === id);
+
+      if (!user) {
+        showAlert('No account found with this ID. Please check or register.', 'error');
+        return;
+      }
+
+      if (user.password !== password) {
+        showAlert('Incorrect password. Please try again.', 'error');
+        return;
+      }
+
+      localStorage.setItem('cps_currentUser', JSON.stringify(user));
+      localStorage.setItem('cps_sessionActive', 'true');
+      showAlert('Login successful! Redirecting...', 'success');
+      console.log('✅ Login success:', role, id);
+
+      setTimeout(() => {
+        window.location.href = cfg.dashboard;
+      }, 800);
+    }
+
+    // ================================================================
+    // EMAIL DOMAIN HINT
+    // ================================================================
+    document.addEventListener('input', (e) => {
+      if (e.target.type === 'email') {
+        const hint = e.target.parentElement.nextElementSibling;
+        if (hint && hint.classList.contains('domain-hint')) {
+          const val = e.target.value.trim().toLowerCase();
+          if (val && !val.endsWith(ALLOWED_DOMAIN)) {
+            hint.innerHTML = '<i class="fas fa-times-circle" style="color:#dc2626;"></i> Invalid — must end with ' + ALLOWED_DOMAIN;
+            hint.style.color = '#dc2626';
+          } else if (val) {
+            hint.innerHTML = '<i class="fas fa-check-circle" style="color:#15803d;"></i> Valid college email';
+            hint.style.color = '#15803d';
+          } else {
+            hint.innerHTML = '<i class="fas fa-info-circle"></i> Must end with ' + ALLOWED_DOMAIN;
+            hint.style.color = '#0f7db6';
+          }
+        }
+      }
+    });
+
+    // ================================================================
+    // INIT
+    // ================================================================
+    window.addEventListener('DOMContentLoaded', () => {
+      ['cps_students', 'cps_teachers', 'cps_hods', 'cps_security'].forEach(key => {
+        const data = JSON.parse(localStorage.getItem(key) || '[]');
+        console.log(`   ${key}: ${data.length} records`);
+      });
+      console.log('%c🎓 Auth Loaded — 4 roles', 'color: #0f7db6; font-size: 14px; font-weight: bold;');
+    });
+  </script>
+</body>
+</html>

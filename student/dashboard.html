@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Dashboard | College Permission</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+  <script type="module" src="../firebase-boot.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: #eef4f9; min-height: 100vh; color: #0b2b4a; display: flex; }
+
+    .sidebar {
+      width: 255px;
+      background: linear-gradient(180deg, #0a3e5e 0%, #0d4f78 100%);
+      color: #e5f1fa; min-height: 100vh; padding: 1.4rem 1rem;
+      display: flex; flex-direction: column; position: sticky; top: 0;
+      height: 100vh; overflow-y: auto; flex-shrink: 0;
+    }
+    .sidebar-brand { display: flex; align-items: center; gap: 10px; padding-bottom: 1.2rem; margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.12); }
+    .sidebar-brand .logo { width: 42px; height: 42px; background: rgba(255,255,255,0.15); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #a5d8ff; }
+    .sidebar-brand h2 { font-size: 0.98rem; font-weight: 700; line-height: 1.2; }
+    .sidebar-brand span { font-size: 0.65rem; color: #a5c9e0; display: block; font-weight: 500; }
+
+    .nav-menu { list-style: none; display: flex; flex-direction: column; gap: 0.15rem; flex: 1; }
+    .nav-menu a { display: flex; align-items: center; gap: 11px; padding: 0.6rem 0.85rem; border-radius: 10px; color: #c9e2f2; text-decoration: none; font-size: 0.82rem; font-weight: 500; transition: all 0.15s; cursor: pointer; }
+    .nav-menu a i { width: 17px; font-size: 0.88rem; text-align: center; }
+    .nav-menu a:hover { background: rgba(255,255,255,0.1); color: white; }
+    .nav-menu a.active { background: #ffffff; color: #0a3e5e; font-weight: 700; }
+    .nav-menu a.active i { color: #0f7db6; }
+
+    .nav-section { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.1em; color: #6e9cb5; padding: 0.9rem 0.85rem 0.35rem; font-weight: 700; }
+    .logout-item { margin-top: auto; padding-top: 0.8rem; border-top: 1px solid rgba(255,255,255,0.12); }
+    .logout-item a { color: #ffb3b3; }
+    .logout-item a:hover { background: rgba(255,80,80,0.15); color: #ffd6d6; }
+
+    .main-content { flex: 1; padding: 1.6rem 2rem; overflow-y: auto; max-width: calc(100% - 255px); }
+    .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
+    .topbar .page-title h1 { font-size: 1.4rem; font-weight: 700; color: #0a3e5e; letter-spacing: -0.02em; }
+    .topbar .page-title p { font-size: 0.8rem; color: #4f7b96; margin-top: 3px; }
+
+    .topbar-right { display: flex; align-items: center; gap: 0.8rem; }
+    .user-chip { display: flex; align-items: center; gap: 9px; background: white; padding: 0.35rem 0.9rem 0.35rem 0.45rem; border-radius: 40px; border: 1px solid #dbeaf5; }
+    .user-chip .avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #0f7db6, #0a4b7a); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem; font-weight: 700; overflow: hidden; flex-shrink: 0; }
+    .user-chip .avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .user-chip .user-info strong { font-size: 0.76rem; display: block; color: #0a3e5e; }
+    .user-chip .user-info span { font-size: 0.64rem; color: #5a89a6; }
+
+    /* ⭐ Live update pill */
+    .live-pill {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+      padding: 0.3rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      animation: pulsePill 1.4s ease-in-out infinite;
+    }
+    .live-pill.show { display: inline-flex; }
+    .live-pill .live-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #15803d;
+      animation: pulseDot 1.4s ease-in-out infinite;
+    }
+    @keyframes pulsePill {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.65; }
+    }
+    @keyframes pulseDot {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 #15803d80; }
+      50% { transform: scale(1.15); box-shadow: 0 0 0 6px #15803d00; }
+    }
+    @keyframes flashUpdate {
+      0% { background: #fef3d6; transform: scale(1.1); }
+      100% { background: transparent; transform: scale(1); }
+    }
+    .flash-update { animation: flashUpdate 1.2s ease; border-radius: 6px; }
+
+    .section-view { display: none; animation: fadeIn 0.25s ease; }
+    .section-view.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .stat-card { background: white; border-radius: 1.2rem; padding: 1rem 1.1rem; border: 1px solid #e2eff8; box-shadow: 0 8px 20px -12px #0b4b6e30; display: flex; align-items: center; gap: 0.9rem; }
+    .stat-icon { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; flex-shrink: 0; }
+    .stat-icon.pending { background: #fef3d6; color: #b06e0e; }
+    .stat-icon.approved { background: #dcfce7; color: #15803d; }
+    .stat-icon.rejected { background: #fee2e2; color: #b91c1c; }
+    .stat-icon.total { background: #dbeafe; color: #1d4ed8; }
+    .stat-icon.out { background: #ede9fe; color: #6d28d9; }
+    .stat-icon.late { background: #fee2e2; color: #dc2626; }
+    .stat-info h3 { font-size: 1.4rem; font-weight: 800; color: #0a3e5e; line-height: 1; }
+    .stat-info p { font-size: 0.66rem; color: #5a89a6; font-weight: 600; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.03em; }
+
+    .card { background: white; border-radius: 1.4rem; padding: 1.3rem 1.5rem; border: 1px solid #e2eff8; box-shadow: 0 10px 24px -14px #0b4b6e30; margin-bottom: 1.4rem; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.8rem; margin-bottom: 1rem; padding-bottom: 0.9rem; border-bottom: 1px solid #f0f6fb; }
+    .card-header h2 { font-size: 1.05rem; font-weight: 700; color: #0a3e5e; display: flex; align-items: center; gap: 9px; }
+    .card-header h2 i { color: #0f7db6; }
+
+    .badge { padding: 0.3rem 0.85rem; border-radius: 40px; font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; display: inline-block; }
+    .badge.active { background: #dbeafe; color: #1d4ed8; }
+    .badge.pending { background: #fef3d6; color: #b06e0e; }
+    .badge.approved { background: #dcfce7; color: #15803d; }
+    .badge.rejected { background: #fee2e2; color: #b91c1c; }
+
+    .profile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.9rem; }
+    .profile-item { background: #f7fbfe; border-radius: 12px; padding: 0.85rem 1rem; border: 1px solid #e2eff8; }
+    .profile-item label { font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.05em; color: #6b93ab; font-weight: 700; display: block; margin-bottom: 5px; }
+    .profile-item span { font-size: 0.86rem; font-weight: 600; color: #0a3e5e; word-break: break-word; }
+
+    .profile-photo-section {
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+      padding: 1.2rem 1.5rem;
+      background: linear-gradient(135deg, #f7fbfe 0%, #e5f1fa 100%);
+      border-radius: 14px;
+      border: 1.5px solid #d9ebf7;
+      margin-bottom: 1.3rem;
+      flex-wrap: wrap;
+    }
+    .profile-photo-lg {
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #0f7db6, #0a4b7a);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 2.5rem;
+      font-weight: 800;
+      overflow: hidden;
+      flex-shrink: 0;
+      border: 4px solid white;
+      box-shadow: 0 10px 24px -8px #0f7db680;
+    }
+    .profile-photo-lg img { width: 100%; height: 100%; object-fit: cover; }
+    .profile-photo-info { flex: 1; min-width: 200px; }
+    .profile-photo-info h3 { font-size: 1.15rem; font-weight: 800; color: #0a3e5e; margin-bottom: 4px; }
+    .profile-photo-info p { font-size: 0.82rem; color: #5a89a6; font-weight: 600; margin-bottom: 0.8rem; }
+    .photo-upload-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0.55rem 1rem;
+      background: #0f7db6;
+      color: white;
+      border-radius: 10px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.15s;
+      border: none;
+      font-family: inherit;
+    }
+    .photo-upload-btn:hover { background: #0a6291; transform: translateY(-2px); }
+    .photo-hint { font-size: 0.68rem; color: #7ba3bd; margin-top: 6px; display: block; }
+
+    .attendance-editable {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      flex-wrap: wrap;
+    }
+    .attendance-editable input {
+      width: 90px;
+      padding: 0.55rem 0.7rem;
+      border: 1.5px solid #d9ebf7;
+      border-radius: 9px;
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #0a3e5e;
+      outline: none;
+      text-align: center;
+    }
+    .attendance-editable input:focus { border-color: #0f7db6; box-shadow: 0 0 0 3px #0f7db620; }
+    .attendance-editable .btn-sm { padding: 0.5rem 0.9rem; }
+
+    .cp-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.2rem; }
+    .cp-detail-item label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: #6b93ab; font-weight: 700; display: block; margin-bottom: 4px; }
+    .cp-detail-item span { font-size: 0.88rem; font-weight: 600; color: #0a3e5e; word-break: break-word; }
+
+    .progress-track { display: flex; align-items: center; gap: 0; margin: 1rem 0; flex-wrap: wrap; }
+    .progress-step { display: flex; flex-direction: column; align-items: center; flex: 1; position: relative; min-width: 60px; }
+    .progress-step .circle { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; background: #e5f1fa; color: #7ba3bd; border: 2px solid #d3e5f0; z-index: 2; }
+    .progress-step .circle.done { background: #0f7db6; color: white; border-color: #0f7db6; }
+    .progress-step .circle.current { background: #fef3d6; color: #b06e0e; border-color: #f59e0b; box-shadow: 0 0 0 4px #fef3d650; }
+    .progress-step .circle.rejected { background: #fee2e2; color: #b91c1c; border-color: #ef4444; }
+    .progress-step .label { font-size: 0.58rem; font-weight: 700; color: #5a89a6; margin-top: 5px; text-align: center; text-transform: uppercase; }
+    .progress-step .line { position: absolute; top: 15px; left: calc(50% + 17px); width: calc(100% - 34px); height: 2px; background: #d3e5f0; z-index: 1; }
+    .progress-step .line.done { background: #0f7db6; }
+
+    .btn { padding: 0.55rem 1.2rem; border-radius: 10px; font-size: 0.8rem; font-weight: 700; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 6px; transition: 0.15s; text-decoration: none; font-family: inherit; }
+    .btn-primary { background: #0f7db6; color: white; box-shadow: 0 6px 14px -6px #0f7db680; }
+    .btn-primary:hover { background: #0a6291; transform: translateY(-2px); }
+    .btn-outline { background: white; color: #0f5b87; border: 1.5px solid #c4def0; }
+    .btn-outline:hover { background: #e5f1fa; border-color: #0f7db6; }
+    .btn-danger { background: #fee2e2; color: #b91c1c; border: 1.5px solid #fecaca; }
+    .btn-danger:hover { background: #fecaca; }
+    .btn-success { background: #dcfce7; color: #15803d; border: 1.5px solid #bbf7d0; }
+    .btn-sm { padding: 0.4rem 0.9rem; font-size: 0.72rem; }
+    .btn-group { display: flex; gap: 0.7rem; flex-wrap: wrap; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    table thead th { text-align: left; padding: 0.65rem 0.75rem; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.05em; color: #6b93ab; font-weight: 700; background: #f7fbfe; border-bottom: 2px solid #e8f2fa; white-space: nowrap; }
+    table tbody td { padding: 0.8rem 0.75rem; border-bottom: 1px solid #f0f6fb; color: #1e4e6e; font-weight: 500; vertical-align: middle; }
+    table tbody tr:hover { background: #f7fbfe; }
+
+    .status-pill { padding: 0.25rem 0.7rem; border-radius: 40px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; display: inline-block; }
+    .status-pill.approved { background: #dcfce7; color: #15803d; }
+    .status-pill.pending { background: #fef3d6; color: #b06e0e; }
+    .status-pill.rejected { background: #fee2e2; color: #b91c1c; }
+    .status-pill.expired { background: #e5e7eb; color: #4b5563; }
+
+    .timeline { list-style: none; padding-left: 0; }
+    .timeline li { position: relative; padding-left: 1.6rem; padding-bottom: 1rem; border-left: 2px solid #d3e5f0; margin-left: 0.4rem; }
+    .timeline li:last-child { border-left-color: transparent; padding-bottom: 0; }
+    .timeline li::before { content: ''; position: absolute; left: -7px; top: 2px; width: 12px; height: 12px; border-radius: 50%; background: #0f7db6; border: 2px solid white; box-shadow: 0 0 0 2px #0f7db630; }
+    .timeline li.pending::before { background: #f59e0b; }
+    .timeline li.done::before { background: #15803d; }
+    .timeline li.rejected::before { background: #ef4444; }
+    .timeline .time { font-size: 0.66rem; color: #6b93ab; font-weight: 600; }
+    .timeline .event { font-size: 0.82rem; color: #1e4e6e; font-weight: 500; margin-top: 2px; }
+
+    .alert { border-radius: 12px; padding: 0.85rem 1.1rem; font-size: 0.8rem; font-weight: 500; display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; line-height: 1.5; }
+    .alert-warning { background: #fef3d6; color: #92400e; border: 1px solid #fde68a; }
+    .alert-info { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+    .alert-success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .alert i { font-size: 1.1rem; flex-shrink: 0; }
+
+    .perm-types-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; }
+    .perm-type-chip { background: #f7fbfe; border: 1.5px solid #d9ebf7; border-radius: 12px; padding: 0.9rem 0.9rem; font-size: 0.78rem; font-weight: 700; color: #1e4e6e; display: flex; align-items: center; gap: 9px; transition: 0.15s; cursor: pointer; }
+    .perm-type-chip:hover { background: #e5f1fa; border-color: #0f7db6; color: #0a3e5e; transform: translateY(-2px); }
+    .perm-type-chip i { color: #0f7db6; font-size: 1rem; }
+
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+    .form-group { margin-bottom: 0.9rem; }
+    .form-group label { font-size: 0.72rem; font-weight: 600; color: #0a3e5e; display: block; margin-bottom: 5px; }
+    .form-group label .required { color: #dc2626; margin-left: 2px; }
+
+    .input-wrapper { position: relative; }
+    .input-wrapper i { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: #7ba3bd; font-size: 0.85rem; pointer-events: none; }
+    .input-wrapper input, .input-wrapper select, .input-wrapper textarea { width: 100%; padding: 0.7rem 0.9rem 0.7rem 2.5rem; border: 1.5px solid #d9ebf7; border-radius: 11px; font-family: inherit; font-size: 0.85rem; color: #0b2b4a; background: #fbfeff; outline: none; transition: 0.15s; }
+    .input-wrapper textarea { min-height: 80px; resize: vertical; }
+    .input-wrapper input:focus, .input-wrapper select:focus, .input-wrapper textarea:focus { border-color: #0f7db6; box-shadow: 0 0 0 4px #0f7db620; background: white; }
+
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11,43,74,0.6); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 100; padding: 1rem; }
+    .modal-overlay.show { display: flex; }
+    .modal { background: white; border-radius: 1.4rem; padding: 1.8rem; max-width: 540px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 60px -15px #0b2b4a80; animation: modalIn 0.25s ease; }
+    @keyframes modalIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+    .modal h3 { font-size: 1.15rem; font-weight: 700; color: #0a3e5e; margin-bottom: 1rem; display: flex; align-items: center; gap: 9px; }
+    .modal h3 i { color: #0f7db6; }
+
+    .toast-alert { position: fixed; top: 20px; right: 20px; z-index: 200; padding: 0.85rem 1.2rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600; box-shadow: 0 12px 30px -10px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 9px; max-width: 380px; animation: slideIn 0.3s ease; }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+
+    @media (max-width: 900px) {
+      .sidebar { width: 70px; padding: 1rem 0.4rem; align-items: center; }
+      .sidebar-brand h2, .sidebar-brand span, .nav-menu a span, .nav-section { display: none; }
+      .sidebar-brand .logo { margin: 0 auto; }
+      .nav-menu a { justify-content: center; padding: 0.65rem 0.5rem; }
+      .nav-menu a i { font-size: 1.05rem; }
+      .main-content { max-width: calc(100% - 70px); padding: 1.3rem 1.1rem; }
+    }
+    @media (max-width: 600px) {
+      .main-content { padding: 1rem; }
+      .topbar .page-title h1 { font-size: 1.15rem; }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+      .btn-group { flex-direction: column; }
+      .btn-group .btn { justify-content: center; width: 100%; }
+      table { font-size: 0.72rem; }
+      .cp-details, .profile-grid { grid-template-columns: 1fr 1fr; }
+      .profile-photo-section { flex-direction: column; text-align: center; }
+      .profile-photo-lg { margin: 0 auto; }
+    }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="logo"><i class="fas fa-graduation-cap"></i></div>
+      <div>
+        <h2>Student Portal</h2>
+        <span>College Permission</span>
+      </div>
+    </div>
+    <ul class="nav-menu">
+      <li class="nav-section">Main</li>
+      <li><a class="active" data-section="dashboard" onclick="switchSection('dashboard', this)"><i class="fas fa-home"></i> <span>Dashboard</span></a></li>
+      <li><a data-section="new-request" onclick="switchSection('new-request', this)"><i class="fas fa-plus-circle"></i> <span>New Permission</span></a></li>
+      <li><a data-section="my-requests" onclick="switchSection('my-requests', this)"><i class="fas fa-list-alt"></i> <span>My Requests</span></a></li>
+      <li><a data-section="permission-slip" onclick="switchSection('permission-slip', this)"><i class="fas fa-ticket-alt"></i> <span>My Slips</span></a></li>
+      <li class="nav-section">Tracking</li>
+      <li><a data-section="history" onclick="switchSection('history', this)"><i class="fas fa-history"></i> <span>History</span></a></li>
+      <li><a data-section="analytics" onclick="switchSection('analytics', this)"><i class="fas fa-chart-line"></i> <span>Analytics</span></a></li>
+      <li><a data-section="notifications" onclick="switchSection('notifications', this)"><i class="fas fa-bell"></i> <span>Notifications</span></a></li>
+      <li class="nav-section">Account</li>
+      <li><a data-section="profile" onclick="switchSection('profile', this)"><i class="fas fa-user"></i> <span>My Profile</span></a></li>
+      <li><a data-section="audit" onclick="switchSection('audit', this)"><i class="fas fa-clipboard-list"></i> <span>Audit Trail</span></a></li>
+      <li class="logout-item"><a onclick="logout()"><i class="fas fa-sign-out-alt"></i> <span>Logout</span></a></li>
+    </ul>
+  </aside>
+
+  <main class="main-content">
+    <div class="topbar">
+      <div class="page-title">
+        <h1 id="pageTitle">Dashboard</h1>
+        <p id="pageSubtitle">Welcome to your student portal</p>
+      </div>
+      <div class="topbar-right">
+        <span class="live-pill" id="livePill">
+          <span class="live-dot"></span> LIVE
+        </span>
+        <div class="user-chip">
+          <div class="avatar" id="avatarInitials">--</div>
+          <div class="user-info">
+            <strong id="chipName">--</strong>
+            <span id="chipRegNo">--</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div class="section-view active" id="section-dashboard">
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-icon total"><i class="fas fa-file-alt"></i></div><div class="stat-info"><h3 id="statTotal">0</h3><p>Total Requests</p></div></div>
+        <div class="stat-card"><div class="stat-icon pending"><i class="fas fa-hourglass-half"></i></div><div class="stat-info"><h3 id="statPending">0</h3><p>Pending</p></div></div>
+        <div class="stat-card"><div class="stat-icon approved"><i class="fas fa-check-circle"></i></div><div class="stat-info"><h3 id="statApproved">0</h3><p>Approved</p></div></div>
+        <div class="stat-card"><div class="stat-icon rejected"><i class="fas fa-times-circle"></i></div><div class="stat-info"><h3 id="statRejected">0</h3><p>Rejected</p></div></div>
+        <div class="stat-card"><div class="stat-icon out"><i class="fas fa-door-open"></i></div><div class="stat-info"><h3 id="statOut">0</h3><p>Currently Out</p></div></div>
+        <div class="stat-card"><div class="stat-icon late"><i class="fas fa-clock"></i></div><div class="stat-info"><h3 id="statLate">0</h3><p>Late Returns</p></div></div>
+      </div>
+
+      <div class="card" id="currentPermissionCard">
+        <div class="card-header">
+          <h2><i class="fas fa-clock"></i> Current Permission — Live Tracking</h2>
+          <span class="badge pending" id="currentStatusBadge">Loading</span>
+        </div>
+        <div id="currentPermissionContent">
+          <div class="alert alert-info"><i class="fas fa-info-circle"></i><span>No active permission request.</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h2><i class="fas fa-shield-alt"></i> Smart Pre-Check</h2></div>
+        <div class="alert alert-info"><i class="fas fa-user-check"></i><span><strong>Parent Verified:</strong> Your parent details are on record.</span></div>
+      </div>
+    </div>
+
+    <!-- NEW REQUEST -->
+    <div class="section-view" id="section-new-request">
+      <div class="card">
+        <div class="card-header">
+          <h2><i class="fas fa-tags"></i> Select Permission Category</h2>
+          <span class="badge active">Step 1 of 2</span>
+        </div>
+        <p style="font-size:0.82rem; color:#5a89a6; margin-bottom:1rem;">Choose a category to continue.</p>
+        <div class="perm-types-grid">
+          <div class="perm-type-chip" onclick="openRequestForm('Medical')"><i class="fas fa-notes-medical"></i> Medical</div>
+          <div class="perm-type-chip" onclick="openRequestForm('Personal')"><i class="fas fa-user"></i> Personal</div>
+          <div class="perm-type-chip" onclick="openRequestForm('Family Emergency')"><i class="fas fa-house-crack"></i> Family Emergency</div>
+          <div class="perm-type-chip" onclick="openRequestForm('Bank Work')"><i class="fas fa-building-columns"></i> Bank Work</div>
+          <div class="perm-type-chip" onclick="openRequestForm('Government Office')"><i class="fas fa-landmark"></i> Government Office</div>
+          <div class="perm-type-chip" onclick="openRequestForm('Internship')"><i class="fas fa-briefcase"></i> Internship</div>
+          <div class="perm-type-chip" onclick="openRequestForm('Interview')"><i class="fas fa-user-tie"></i> Interview</div>
+          <div class="perm-type-chip" onclick="openRequestForm('College Event')"><i class="fas fa-calendar-check"></i> College Event</div>
+          <div class="perm-type-chip" onclick="openRequestForm('Competition')"><i class="fas fa-trophy"></i> Competition</div>
+          <div class="perm-type-chip" onclick="openRequestForm('Industrial Visit')"><i class="fas fa-industry"></i> Industrial Visit</div>
+          <div class="perm-type-chip" onclick="openRequestForm('Training')"><i class="fas fa-chalkboard"></i> Training</div>
+          <div class="perm-type-chip" onclick="openRequestForm('Other')"><i class="fas fa-ellipsis"></i> Other</div>
+        </div>
+      </div>
+
+      <div class="card" id="requestFormCard" style="display:none;">
+        <div class="card-header">
+          <h2><i class="fas fa-pen"></i> Request Details — <span id="selectedType">--</span></h2>
+          <span class="badge active">Step 2 of 2</span>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Date <span class="required">*</span></label>
+            <div class="input-wrapper"><i class="fas fa-calendar"></i><input type="date" id="reqDate"></div>
+          </div>
+          <div class="form-group">
+            <label>Out Time <span class="required">*</span></label>
+            <div class="input-wrapper"><i class="fas fa-sign-out-alt"></i><input type="time" id="reqOutTime"></div>
+          </div>
+          <div class="form-group">
+            <label>Return Time <span class="required">*</span></label>
+            <div class="input-wrapper"><i class="fas fa-sign-in-alt"></i><input type="time" id="reqReturnTime"></div>
+          </div>
+          <div class="form-group">
+            <label>Mode of Travel</label>
+            <div class="input-wrapper"><i class="fas fa-bus"></i>
+              <select id="reqMode">
+                <option value="Bus">Bus</option>
+                <option value="Auto">Auto</option>
+                <option value="Bike">Bike</option>
+                <option value="Car">Car</option>
+                <option value="Train">Train</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Destination <span class="required">*</span></label>
+          <div class="input-wrapper"><i class="fas fa-map-marker-alt"></i><input type="text" id="reqDestination" placeholder="e.g., Rajahmundry"></div>
+        </div>
+
+        <div class="form-group">
+          <label>Reason / Notes <span class="required">*</span></label>
+          <div class="input-wrapper"><i class="fas fa-comment-alt"></i><textarea id="reqReason" placeholder="Brief reason..."></textarea></div>
+        </div>
+
+        <div class="btn-group" style="margin-top:0.8rem;">
+          <button class="btn btn-outline" onclick="closeRequestForm()"><i class="fas fa-times"></i> Cancel</button>
+          <button class="btn btn-primary" onclick="submitRequest()"><i class="fas fa-paper-plane"></i> Submit Request</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MY REQUESTS -->
+    <div class="section-view" id="section-my-requests">
+      <div class="card">
+        <div class="card-header">
+          <h2><i class="fas fa-list-alt"></i> All My Requests</h2>
+          <span class="badge active" id="requestCount">0</span>
+        </div>
+        <div style="overflow-x:auto; border-radius:12px; border:1px solid #f0f6fb;">
+          <table>
+            <thead><tr><th>ID</th><th>Date</th><th>Reason</th><th>Out Time</th><th>Status</th><th>Approved By</th></tr></thead>
+            <tbody id="requestsTableBody"></tbody>
+          </table>
+        </div>
+        <div style="text-align:center; padding:3rem 1rem; color:#a0bcd0;" id="noRequests">
+          <i class="fas fa-inbox" style="font-size:2.5rem; margin-bottom:0.8rem; display:block; color:#c4def0;"></i>
+          <p style="font-size:0.85rem; font-weight:500;">No requests yet</p>
+          <p style="font-size:0.75rem; margin-top:4px;">Submit your first permission request.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- PERMISSION SLIP -->
+    <div class="section-view" id="section-permission-slip">
+      <div class="card">
+        <div class="card-header">
+          <h2><i class="fas fa-ticket-alt"></i> My Digital Permission Slips</h2>
+          <span class="badge approved">HOD Approved Only</span>
+        </div>
+        <div class="alert alert-info"><i class="fas fa-info-circle"></i><span>Only <strong>HOD-approved</strong> permissions generate QR slips here. Show the QR at the gate.</span></div>
+        <div id="slipsList"></div>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="section-view" id="section-history">
+      <div class="card">
+        <div class="card-header"><h2><i class="fas fa-history"></i> Complete Permission History</h2></div>
+        <div style="overflow-x:auto; border-radius:12px; border:1px solid #f0f6fb;">
+          <table>
+            <thead><tr><th>ID</th><th>Date</th><th>Reason</th><th>Status</th></tr></thead>
+            <tbody id="historyTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANALYTICS -->
+    <div class="section-view" id="section-analytics">
+      <div class="card">
+        <div class="card-header"><h2><i class="fas fa-chart-line"></i> Permission Frequency</h2></div>
+        <div class="cp-details">
+          <div class="cp-detail-item"><label>Total</label><span id="analyticsTotal">0</span></div>
+          <div class="cp-detail-item"><label>Approved</label><span id="analyticsApproved">0</span></div>
+          <div class="cp-detail-item"><label>Rejected</label><span id="analyticsRejected">0</span></div>
+          <div class="cp-detail-item"><label>Pending</label><span id="analyticsPending">0</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NOTIFICATIONS -->
+    <div class="section-view" id="section-notifications">
+      <div class="card">
+        <div class="card-header"><h2><i class="fas fa-bell"></i> Notification Center</h2></div>
+        <ul class="timeline" id="notificationsList">
+          <li class="done"><div class="time">Now</div><div class="event">Welcome to your dashboard</div></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- PROFILE -->
+    <div class="section-view" id="section-profile">
+      <div class="card">
+        <div class="card-header"><h2><i class="fas fa-user-circle"></i> My Profile</h2><span class="badge approved">✓ Registered</span></div>
+
+        <div class="profile-photo-section">
+          <div class="profile-photo-lg" id="profilePhotoLarge">
+            <span id="profileInitials">--</span>
+          </div>
+          <div class="profile-photo-info">
+            <h3 id="photoName">--</h3>
+            <p id="photoRegNo">--</p>
+            <input type="file" id="profilePhotoUpload" accept="image/*" style="display:none;" onchange="handleProfilePhotoUpload(event)">
+            <button class="photo-upload-btn" onclick="document.getElementById('profilePhotoUpload').click()">
+              <i class="fas fa-camera"></i> <span id="photoBtnText">Upload / Change Photo</span>
+            </button>
+            <span class="photo-hint">JPG / PNG · Max 500KB · Photo will appear on permission slip</span>
+          </div>
+        </div>
+
+        <div class="profile-item" style="background:#fef3d6; border-color:#fde68a; margin-bottom:1rem;">
+          <label style="color:#b45309;">📊 Attendance % (Editable)</label>
+          <div class="attendance-editable">
+            <input type="number" id="editAttendance" min="0" max="100" step="0.1" placeholder="82">
+            <span style="font-weight:800; color:#b45309; font-size:1.1rem;">%</span>
+            <button class="btn btn-success btn-sm" onclick="saveAttendance()"><i class="fas fa-save"></i> Save</button>
+          </div>
+          <span style="font-size:0.7rem; color:#92400e; margin-top:6px; display:block;">
+            <i class="fas fa-info-circle"></i> You can update your attendance % here. It will reflect everywhere.
+          </span>
+        </div>
+
+        <div class="profile-grid">
+          <div class="profile-item"><label>Full Name</label><span id="pFullName">--</span></div>
+          <div class="profile-item"><label>Register Number</label><span id="pRegNo">--</span></div>
+          <div class="profile-item"><label>Branch</label><span id="pBranch">--</span></div>
+          <div class="profile-item"><label>Section</label><span id="pSection">--</span></div>
+          <div class="profile-item"><label>Year</label><span id="pYear">--</span></div>
+          <div class="profile-item"><label>Semester</label><span id="pSemester">--</span></div>
+          <div class="profile-item"><label>College Email</label><span id="pEmail">--</span></div>
+          <div class="profile-item"><label>Mobile</label><span id="pMobile">--</span></div>
+          <div class="profile-item"><label>Parent Name</label><span id="pParentName">--</span></div>
+          <div class="profile-item"><label>Parent Mobile</label><span id="pParentMobile">--</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AUDIT -->
+    <div class="section-view" id="section-audit">
+      <div class="card">
+        <div class="card-header"><h2><i class="fas fa-clipboard-list"></i> Digital Audit Trail</h2></div>
+        <ul class="timeline" id="auditList">
+          <li class="done"><div class="time">Just now</div><div class="event">Student logged in</div></li>
+        </ul>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let currentStudent = null;
+
+    window.addEventListener('DOMContentLoaded', async () => {
+  const session = localStorage.getItem('cps_currentUser');
+  const sessionActive = localStorage.getItem('cps_sessionActive');
+
+  if (!session || sessionActive !== 'true') {
+    localStorage.removeItem('cps_currentUser');
+    localStorage.removeItem('cps_sessionActive');
+    window.location.replace('../index.html');
+    return;
+  }
+  const user = JSON.parse(session);
+  if (user.role !== 'student') { window.location.replace('../index.html'); return; }
+
+  // ⭐⭐ NEW: WAIT FOR FIREBASE DATA
+  if (!window.CPS_BOOT_DONE) {
+    console.log('⏳ Student: Waiting for Firebase data...');
+    await new Promise(r => window.addEventListener('cps-boot-ready', r, { once: true }));
+    console.log('✅ Student: Firebase ready');
+  }
+
+      // Refresh from cps_students (to get latest photo/attendance)
+      const allStudents = JSON.parse(localStorage.getItem('cps_students') || '[]');
+      const freshUser = allStudents.find(s => s.regNo === user.regNo);
+      if (freshUser) {
+        currentStudent = freshUser;
+        localStorage.setItem('cps_currentUser', JSON.stringify(freshUser));
+      } else {
+        currentStudent = user;
+      }
+
+      populateProfile(currentStudent);
+      loadRequests();
+      console.log('✅ Student Dashboard Loaded:', currentStudent.fullName);
+    });
+
+    // ============================================================
+    // ⭐ REAL-TIME listener — LIVE UPDATES
+    // Fires whenever firebase-boot.js detects new data from Firestore.
+    // ============================================================
+    window.addEventListener('cps-data-updated', (e) => {
+      if (e.detail.key === 'cps_permissions' || e.detail.key === 'cps_students') {
+        console.log('📡 Live update:', e.detail.key, '| count:', e.detail.count);
+
+        // Show live pill
+        const pill = document.getElementById('livePill');
+        if (pill) {
+          pill.classList.add('show');
+          setTimeout(() => pill.classList.remove('show'), 2500);
+        }
+
+        // Refresh current student record from latest localStorage
+        if (currentStudent) {
+          const allStudents = JSON.parse(localStorage.getItem('cps_students') || '[]');
+          const freshUser = allStudents.find(s => s.regNo === currentStudent.regNo);
+          if (freshUser) {
+            currentStudent = freshUser;
+            localStorage.setItem('cps_currentUser', JSON.stringify(freshUser));
+            populateProfile(currentStudent);
+          }
+        }
+
+        // Refresh all request views
+        loadRequests();
+
+        // Flash pending count
+        const pendingEl = document.getElementById('statPending');
+        if (pendingEl) {
+          pendingEl.classList.remove('flash-update');
+          void pendingEl.offsetWidth; // restart animation
+          pendingEl.classList.add('flash-update');
+        }
+      }
+    });
+
+    const sectionTitles = {
+      'dashboard': { title: 'Dashboard', sub: 'Welcome to your student portal' },
+      'new-request': { title: 'New Permission Request', sub: 'Select a category and submit details' },
+      'my-requests': { title: 'My Requests', sub: 'All your permission requests' },
+      'permission-slip': { title: 'Permission Slips', sub: 'Your HOD-approved QR slips' },
+      'history': { title: 'Permission History', sub: 'Complete archive' },
+      'analytics': { title: 'Analytics', sub: 'Your permission patterns' },
+      'notifications': { title: 'Notifications', sub: 'Recent updates' },
+      'profile': { title: 'My Profile', sub: 'Your registered details' },
+      'audit': { title: 'Audit Trail', sub: 'Activity log' }
+    };
+
+    function switchSection(section, linkEl) {
+      document.querySelectorAll('.section-view').forEach(s => s.classList.remove('active'));
+      const target = document.getElementById('section-' + section);
+      if (target) target.classList.add('active');
+      document.querySelectorAll('.nav-menu a').forEach(a => a.classList.remove('active'));
+      if (linkEl) linkEl.classList.add('active');
+      const info = sectionTitles[section];
+      if (info) {
+        document.getElementById('pageTitle').textContent = info.title;
+        document.getElementById('pageSubtitle').textContent = info.sub;
+      }
+      document.querySelector('.main-content').scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ================================================================
+    // PROFILE
+    // ================================================================
+    function populateProfile(user) {
+      if (!user) return;
+      const initials = (user.fullName || 'S').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+      document.getElementById('avatarInitials').innerHTML = user.photo
+        ? `<img src="${user.photo}" alt="">`
+        : initials;
+      document.getElementById('chipName').textContent = user.fullName || '--';
+      document.getElementById('chipRegNo').textContent = (user.regNo || '--') + ' · ' + (user.branch || '--');
+
+      document.getElementById('profileInitials').textContent = initials;
+      document.getElementById('profilePhotoLarge').innerHTML = user.photo
+        ? `<img src="${user.photo}" alt="">`
+        : initials;
+      document.getElementById('photoName').textContent = user.fullName || '--';
+      document.getElementById('photoRegNo').textContent = (user.regNo || '--') + ' · ' + (user.branch || '--') + (user.section ? ' · Sec ' + user.section : '');
+      document.getElementById('photoBtnText').textContent = user.photo ? 'Change Photo' : 'Upload Photo';
+
+      document.getElementById('editAttendance').value = user.attendance || '';
+
+      document.getElementById('pFullName').textContent = user.fullName || '--';
+      document.getElementById('pRegNo').textContent = user.regNo || '--';
+      document.getElementById('pBranch').textContent = user.branch || '--';
+      document.getElementById('pSection').textContent = user.section || 'No Section';
+      document.getElementById('pYear').textContent = user.year || '--';
+      document.getElementById('pSemester').textContent = user.semester || '--';
+      document.getElementById('pEmail').textContent = user.email || '--';
+      document.getElementById('pMobile').textContent = user.mobile || '--';
+      document.getElementById('pParentName').textContent = user.parentName || '--';
+      document.getElementById('pParentMobile').textContent = user.parentMobile || '--';
+    }
+
+    // ================================================================
+    // PHOTO UPLOAD
+    // ================================================================
+    function handleProfilePhotoUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      if (file.size > 500 * 1024) {
+        showToast('Photo size must be less than 500KB.', 'error');
+        event.target.value = '';
+        return;
+      }
+
+      if (!file.type.startsWith('image/')) {
+        showToast('Please upload an image file.', 'error');
+        event.target.value = '';
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64 = e.target.result;
+        currentStudent.photo = base64;
+        const allStudents = JSON.parse(localStorage.getItem('cps_students') || '[]');
+        const idx = allStudents.findIndex(s => s.regNo === currentStudent.regNo);
+        if (idx !== -1) {
+          allStudents[idx].photo = base64;
+          localStorage.setItem('cps_students', JSON.stringify(allStudents));
+        }
+        localStorage.setItem('cps_currentUser', JSON.stringify(currentStudent));
+        populateProfile(currentStudent);
+        showToast('✅ Photo updated successfully!', 'success');
+        console.log('📸 Photo updated for', currentStudent.regNo);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // ================================================================
+    // SAVE ATTENDANCE
+    // ================================================================
+    function saveAttendance() {
+      const val = parseFloat(document.getElementById('editAttendance').value);
+      if (isNaN(val) || val < 0 || val > 100) {
+        showToast('Enter a valid attendance % (0-100).', 'error');
+        return;
+      }
+
+      currentStudent.attendance = val;
+
+      const allStudents = JSON.parse(localStorage.getItem('cps_students') || '[]');
+      const idx = allStudents.findIndex(s => s.regNo === currentStudent.regNo);
+      if (idx !== -1) {
+        allStudents[idx].attendance = val;
+        localStorage.setItem('cps_students', JSON.stringify(allStudents));
+      }
+
+      localStorage.setItem('cps_currentUser', JSON.stringify(currentStudent));
+      populateProfile(currentStudent);
+      showToast(`✅ Attendance updated to ${val}%`, 'success');
+      console.log('📊 Attendance updated:', val);
+    }
+
+    // ================================================================
+    // LOAD REQUESTS
+    // ================================================================
+    function loadRequests() {
+      if (!currentStudent) return;
+      const allRequests = JSON.parse(localStorage.getItem('cps_permissions') || '[]');
+      const myRequests = allRequests.filter(r => r.regNo === currentStudent.regNo);
+      myRequests.sort((a, b) => new Date(b.submittedAt || 0) - new Date(a.submittedAt || 0));
+
+      updateStats(myRequests);
+      renderRequestsTable(myRequests);
+      renderCurrentPermission(myRequests);
+      renderSlips(myRequests);
+      renderHistory(myRequests);
+      renderAnalytics(myRequests);
+      renderNotifications(myRequests);
+    }
+
+    function updateStats(requests) {
+      const total = requests.length;
+      const pending = requests.filter(r => ['pending_teacher_verification', 'teacher_verified', 'pending_hod_approval'].includes(r.status)).length;
+      const approved = requests.filter(r => ['hod_approved', 'approved'].includes(r.status)).length;
+      const rejected = requests.filter(r => ['teacher_rejected', 'hod_rejected'].includes(r.status)).length;
+      const out = requests.filter(r => r.status === 'out').length;
+      const late = requests.filter(r => r.lateReturn).length;
+
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statPending').textContent = pending;
+      document.getElementById('statApproved').textContent = approved;
+      document.getElementById('statRejected').textContent = rejected;
+      document.getElementById('statOut').textContent = out;
+      document.getElementById('statLate').textContent = late;
+      document.getElementById('requestCount').textContent = total;
+      document.getElementById('analyticsTotal').textContent = total;
+      document.getElementById('analyticsApproved').textContent = approved;
+      document.getElementById('analyticsRejected').textContent = rejected;
+      document.getElementById('analyticsPending').textContent = pending;
+    }
+
+    function renderCurrentPermission(requests) {
+      const active = requests.find(r =>
+        ['pending_teacher_verification', 'teacher_verified', 'pending_hod_approval', 'hod_approved', 'out'].includes(r.status)
+      );
+
+      const content = document.getElementById('currentPermissionContent');
+      const badge = document.getElementById('currentStatusBadge');
+
+      if (!active) {
+        content.innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle"></i><span>No active permission request.</span></div>';
+        badge.textContent = 'No Active';
+        badge.className = 'badge pending';
+        return;
+      }
+
+      const info = getStatusInfo(active.status);
+      badge.textContent = info.text;
+      badge.className = 'badge ' + (info.cls === 'approved' ? 'approved' : info.cls === 'rejected' ? 'rejected' : 'pending');
+
+      const canViewSlip = ['hod_approved', 'approved', 'out', 'returned'].includes(active.status);
+
+      content.innerHTML = `
+        <div class="cp-details">
+          <div class="cp-detail-item"><label>Permission ID</label><span>${escapeHtml(active.permissionId || '--')}</span></div>
+          <div class="cp-detail-item"><label>Reason</label><span>${escapeHtml(active.reason || '--')}</span></div>
+          <div class="cp-detail-item"><label>Destination</label><span>${escapeHtml(active.destination || '--')}</span></div>
+          <div class="cp-detail-item"><label>Date</label><span>${escapeHtml(active.date || '--')}</span></div>
+          <div class="cp-detail-item"><label>Out Time</label><span>${escapeHtml(active.outTime || '--')}</span></div>
+          <div class="cp-detail-item"><label>Mode</label><span>${escapeHtml(active.mode || '--')}</span></div>
+          <div class="cp-detail-item"><label>Parent</label><span>${escapeHtml(active.parentMobile || '--')}</span></div>
+        </div>
+        <div class="progress-track">
+          ${getProgressHTML(active.status)}
+        </div>
+        <div class="btn-group">
+          ${canViewSlip ? `<a href="permission-slip.html?id=${active.permissionId}" class="btn btn-primary"><i class="fas fa-qrcode"></i> View Slip</a>` : `
+            <button class="btn btn-outline" disabled style="opacity:0.6; cursor:not-allowed;"><i class="fas fa-lock"></i> Slip available after HOD approval</button>
+          `}
+          <button class="btn btn-danger" onclick="cancelRequest('${active.permissionId}')"><i class="fas fa-ban"></i> Cancel</button>
+        </div>
+      `;
+    }
+
+    function getProgressHTML(status) {
+      const steps = [
+        { key: 'requested', label: 'Requested', done: true },
+        { key: 'teacher', label: 'Teacher', done: ['teacher_verified', 'hod_approved', 'approved', 'out'].includes(status) },
+        { key: 'hod', label: 'HOD', done: ['hod_approved', 'approved', 'out'].includes(status) },
+        { key: 'qr', label: 'QR Slip', done: ['hod_approved', 'approved', 'out'].includes(status) },
+        { key: 'out', label: 'OUT', done: status === 'out' },
+        { key: 'in', label: 'IN', done: false }
+      ];
+
+      return steps.map((s, i) => {
+        const isCurrent = !s.done && (i === 0 || steps[i-1].done);
+        const circleCls = s.done ? 'done' : isCurrent ? 'current' : '';
+        const lineCls = s.done && i < steps.length - 1 ? 'done' : '';
+        return `
+          <div class="progress-step">
+            <div class="circle ${circleCls}">${s.done ? '<i class="fas fa-check"></i>' : isCurrent ? '<i class="fas fa-ellipsis-h"></i>' : ''}</div>
+            <div class="label">${s.label}</div>
+            ${i < steps.length - 1 ? `<div class="line ${lineCls}"></div>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderRequestsTable(requests) {
+      const tbody = document.getElementById('requestsTableBody');
+      const empty = document.getElementById('noRequests');
+      const wrapper = tbody.closest('div[style*="overflow-x"]');
+
+      if (requests.length === 0) {
+        tbody.innerHTML = '';
+        if (wrapper) wrapper.style.display = 'none';
+        empty.style.display = 'block';
+        return;
+      }
+      if (wrapper) wrapper.style.display = 'block';
+      empty.style.display = 'none';
+
+      tbody.innerHTML = requests.map(r => {
+        const info = getStatusInfo(r.status);
+        return `
+          <tr>
+            <td><strong>${escapeHtml(r.permissionId || '--')}</strong></td>
+            <td>${formatDate(r.submittedAt)}</td>
+            <td>${escapeHtml(r.reason || '--')}</td>
+            <td>${escapeHtml(r.outTime || '--')}</td>
+            <td><span class="status-pill ${info.cls}">${info.text}</span></td>
+            <td>${escapeHtml(r.hodApprovedBy || r.verifiedBy || '—')}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderSlips(requests) {
+      const approved = requests.filter(r => ['hod_approved', 'approved'].includes(r.status));
+      const list = document.getElementById('slipsList');
+
+      if (approved.length === 0) {
+        list.innerHTML = '<div class="alert alert-warning"><i class="fas fa-hourglass-half"></i><span>No HOD-approved slips yet. Only HOD-approved permissions generate QR slips.</span></div>';
+        return;
+      }
+
+      list.innerHTML = approved.map(r => `
+        <div style="background:#f7fbfe; border:1.5px dashed #c4def0; border-radius:14px; padding:1.5rem; text-align:center; margin-bottom:1rem;">
+          <i class="fas fa-qrcode" style="font-size:3rem; color:#0f7db6; margin-bottom:0.6rem; display:block;"></i>
+          <p style="font-size:0.9rem; font-weight:700; color:#0a3e5e; margin-bottom:4px;">${escapeHtml(r.permissionId)}</p>
+          <p style="font-size:0.78rem; color:#5a89a6;">${escapeHtml(r.reason || '--')} · ${formatDate(r.hodApprovedAt)}</p>
+          <a href="permission-slip.html?id=${r.permissionId}" class="btn btn-primary" style="margin-top:1rem;"><i class="fas fa-qrcode"></i> View Full Slip</a>
+        </div>
+      `).join('');
+    }
+
+    function renderHistory(requests) {
+      const tbody = document.getElementById('historyTableBody');
+      if (requests.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:2rem; color:#a0bcd0;">No history yet</td></tr>';
+        return;
+      }
+      tbody.innerHTML = requests.map(r => {
+        const info = getStatusInfo(r.status);
+        return `
+          <tr>
+            <td><strong>${escapeHtml(r.permissionId)}</strong></td>
+            <td>${formatDate(r.submittedAt)}</td>
+            <td>${escapeHtml(r.reason)}</td>
+            <td><span class="status-pill ${info.cls}">${info.text}</span></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderNotifications(requests) {
+      const list = document.getElementById('notificationsList');
+      if (requests.length === 0) return;
+      list.innerHTML = requests.slice(0, 8).map(r => {
+        const info = getStatusInfo(r.status);
+        const cls = info.cls === 'approved' ? 'done' : info.cls === 'rejected' ? 'rejected' : 'pending';
+        return `
+          <li class="${cls}">
+            <div class="time">${formatDate(r.submittedAt)}</div>
+            <div class="event">${escapeHtml(r.permissionId)} — ${info.text}</div>
+          </li>
+        `;
+      }).join('');
+    }
+
+    let selectedType = null;
+
+    function openRequestForm(type) {
+      selectedType = type;
+      document.getElementById('selectedType').textContent = type;
+      document.getElementById('requestFormCard').style.display = 'block';
+      document.getElementById('reqDate').value = new Date().toISOString().split('T')[0];
+      document.getElementById('requestFormCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function closeRequestForm() {
+      selectedType = null;
+      document.getElementById('requestFormCard').style.display = 'none';
+      document.getElementById('reqDestination').value = '';
+      document.getElementById('reqReason').value = '';
+      document.getElementById('reqOutTime').value = '';
+      document.getElementById('reqReturnTime').value = '';
+    }
+
+    function submitRequest() {
+      if (!selectedType) { showToast('Please select a category.', 'error'); return; }
+
+      const date = document.getElementById('reqDate').value;
+      const outTime = document.getElementById('reqOutTime').value;
+      const returnTime = document.getElementById('reqReturnTime').value;
+      const mode = document.getElementById('reqMode').value;
+      const destination = document.getElementById('reqDestination').value.trim();
+      const reason = document.getElementById('reqReason').value.trim();
+
+      if (!date || !outTime || !returnTime || !destination || !reason) {
+        showToast('Please fill all required fields.', 'error');
+        return;
+      }
+
+      const allRequests = JSON.parse(localStorage.getItem('cps_permissions') || '[]');
+      const permissionId = 'PER-' + new Date().getFullYear() + '-' + String(allRequests.length + 1).padStart(5, '0');
+
+      const newRequest = {
+        permissionId,
+        regNo: currentStudent.regNo,
+        fullName: currentStudent.fullName,
+        branch: currentStudent.branch,
+        section: currentStudent.section || 'No Section',
+        year: currentStudent.year,
+        semester: currentStudent.semester,
+        email: currentStudent.email,
+        mobile: currentStudent.mobile,
+        parentName: currentStudent.parentName,
+        parentMobile: currentStudent.parentMobile,
+        attendance: currentStudent.attendance || 0,
+        photo: currentStudent.photo || null,
+        type: selectedType,
+        reason,
+        destination,
+        date,
+        outTime,
+        returnTime,
+        mode,
+        status: 'pending_teacher_verification',
+        submittedAt: new Date().toISOString()
+      };
+
+      allRequests.push(newRequest);
+      localStorage.setItem('cps_permissions', JSON.stringify(allRequests));
+
+      const teacherQueue = JSON.parse(localStorage.getItem('cps_pendingPermissions') || '[]');
+      teacherQueue.push(newRequest);
+      localStorage.setItem('cps_pendingPermissions', JSON.stringify(teacherQueue));
+
+      showToast(`✅ Request ${permissionId} submitted! Waiting for teacher.`, 'success');
+      console.log('📤 New permission saved:', permissionId);
+
+      closeRequestForm();
+      loadRequests();
+
+      setTimeout(() => {
+        switchSection('my-requests', document.querySelector('[data-section=my-requests]'));
+      }, 1200);
+    }
+
+    function cancelRequest(permId) {
+      if (!confirm('Cancel this permission request?')) return;
+      const allRequests = JSON.parse(localStorage.getItem('cps_permissions') || '[]');
+      const idx = allRequests.findIndex(r => r.permissionId === permId);
+      if (idx !== -1) {
+        allRequests[idx].status = 'cancelled';
+        allRequests[idx].cancelledAt = new Date().toISOString();
+        localStorage.setItem('cps_permissions', JSON.stringify(allRequests));
+      }
+      showToast('Request cancelled.', 'info');
+      loadRequests();
+    }
+
+    function getStatusInfo(status) {
+      switch (status) {
+        case 'pending_teacher_verification': return { cls: 'pending', text: 'Pending Teacher' };
+        case 'teacher_verified': return { cls: 'pending', text: 'Pending HOD' };
+        case 'teacher_rejected': return { cls: 'rejected', text: 'Teacher Rejected' };
+        case 'pending_hod_approval': return { cls: 'pending', text: 'Pending HOD' };
+        case 'hod_approved': return { cls: 'approved', text: 'Approved' };
+        case 'approved': return { cls: 'approved', text: 'Approved' };
+        case 'hod_rejected': return { cls: 'rejected', text: 'HOD Rejected' };
+        case 'out': return { cls: 'approved', text: 'OUT' };
+        case 'returned': return { cls: 'approved', text: 'Returned' };
+        case 'expired': return { cls: 'expired', text: 'Expired' };
+        case 'cancelled': return { cls: 'expired', text: 'Cancelled' };
+        default: return { cls: 'pending', text: 'Pending' };
+      }
+    }
+
+    function showToast(message, type = 'info') {
+      const colors = {
+        success: { bg: '#dcfce7', color: '#166534', border: '#bbf7d0', icon: 'fa-check-circle' },
+        error: { bg: '#fee2e2', color: '#991b1b', border: '#fecaca', icon: 'fa-exclamation-circle' },
+        info: { bg: '#dbeafe', color: '#1e40af', border: '#bfdbfe', icon: 'fa-info-circle' },
+        warning: { bg: '#fef3d6', color: '#92400e', border: '#fde68a', icon: 'fa-exclamation-triangle' }
+      };
+      const c = colors[type] || colors.info;
+      const existing = document.querySelector('.toast-alert');
+      if (existing) existing.remove();
+      const toast = document.createElement('div');
+      toast.className = 'toast-alert';
+      toast.style.background = c.bg;
+      toast.style.color = c.color;
+      toast.style.border = '1px solid ' + c.border;
+      toast.innerHTML = `<i class="fas ${c.icon}"></i> <span>${message}</span>`;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.style.transition = '0.3s';
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(30px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+
+    function formatDate(iso) {
+      if (!iso) return '--';
+      try { return new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); }
+      catch (e) { return iso; }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+    function logout() {
+      if (confirm('Logout from student portal?')) {
+        localStorage.removeItem('cps_currentUser');
+        localStorage.removeItem('cps_sessionActive');
+        window.location.replace('../index.html');
+      }
+    }
+  </script>
+</body>
+</html>

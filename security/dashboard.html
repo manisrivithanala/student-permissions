@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Security Gate Dashboard | College Permission</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+  <script type="module" src="../firebase-boot.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: #fef2f2; min-height: 100vh; color: #7f1d1d; display: flex; }
+
+    /* SIDEBAR */
+    .sidebar { width: 255px; background: linear-gradient(180deg, #7f1d1d 0%, #991b1b 60%, #b91c1c 100%); color: #fee2e2; min-height: 100vh; padding: 1.4rem 1rem; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; flex-shrink: 0; }
+    .sidebar-brand { display: flex; align-items: center; gap: 10px; padding-bottom: 1.2rem; margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .sidebar-brand .logo { width: 42px; height: 42px; background: rgba(255,255,255,0.15); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #fca5a5; }
+    .sidebar-brand h2 { font-size: 0.98rem; font-weight: 700; color: #fef2f2; }
+    .sidebar-brand span { font-size: 0.65rem; color: #fca5a5; display: block; font-weight: 500; }
+    .nav-menu { list-style: none; display: flex; flex-direction: column; gap: 0.15rem; flex: 1; }
+    .nav-menu a { display: flex; align-items: center; gap: 11px; padding: 0.6rem 0.85rem; border-radius: 10px; color: #fecaca; text-decoration: none; font-size: 0.82rem; font-weight: 500; cursor: pointer; transition: 0.15s; }
+    .nav-menu a i { width: 17px; font-size: 0.88rem; text-align: center; }
+    .nav-menu a:hover { background: rgba(255,255,255,0.1); color: white; }
+    .nav-menu a.active { background: #ffffff; color: #7f1d1d; font-weight: 700; }
+    .nav-section { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.1em; color: #fca5a5; padding: 0.9rem 0.85rem 0.35rem; font-weight: 700; }
+    .nav-badge { margin-left: auto; background: #fbbf24; color: #7f1d1d; font-size: 0.62rem; font-weight: 800; padding: 2px 7px; border-radius: 20px; min-width: 20px; text-align: center; }
+    .logout-item { margin-top: auto; padding-top: 0.8rem; border-top: 1px solid rgba(255,255,255,0.1); }
+    .logout-item a { color: #fca5a5; }
+
+    /* MAIN */
+    .main-content { flex: 1; padding: 1.6rem 2rem; overflow-y: auto; max-width: calc(100% - 255px); }
+    .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
+    .topbar .page-title h1 { font-size: 1.4rem; font-weight: 700; color: #991b1b; letter-spacing: -0.02em; }
+    .topbar .page-title p { font-size: 0.8rem; color: #b91c1c; margin-top: 3px; }
+    .topbar-right { display: flex; align-items: center; gap: 0.7rem; }
+
+    /* ⭐ Live update pill */
+    .live-pill {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+      padding: 0.3rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      animation: pulsePill 1.4s ease-in-out infinite;
+    }
+    .live-pill.show { display: inline-flex; }
+    .live-pill .live-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #15803d;
+      animation: pulseDot 1.4s ease-in-out infinite;
+    }
+    @keyframes pulsePill {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.65; }
+    }
+    @keyframes pulseDot {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 #15803d80; }
+      50% { transform: scale(1.15); box-shadow: 0 0 0 6px #15803d00; }
+    }
+    @keyframes flashUpdate {
+      0% { background: #fef3c7; transform: scale(1.1); }
+      100% { background: transparent; transform: scale(1); }
+    }
+    .flash-update { animation: flashUpdate 1.2s ease; border-radius: 6px; }
+
+    .user-chip { display: flex; align-items: center; gap: 9px; background: white; padding: 0.35rem 0.9rem 0.35rem 0.45rem; border-radius: 40px; border: 1px solid #fecaca; }
+    .user-chip .avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #dc2626, #991b1b); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem; font-weight: 700; }
+    .user-chip .user-info strong { font-size: 0.76rem; display: block; color: #7f1d1d; }
+    .user-chip .user-info span { font-size: 0.64rem; color: #b91c1c; }
+
+    /* SECTION SWITCHING */
+    .section-view { display: none; animation: fadeIn 0.25s ease; }
+    .section-view.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* STATS */
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1.6rem; }
+    .stat-card { background: white; border-radius: 1.2rem; padding: 1rem 1.15rem; border: 1px solid #fee2e2; box-shadow: 0 6px 20px -10px #dc262630; display: flex; align-items: center; gap: 0.9rem; }
+    .stat-icon { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; flex-shrink: 0; }
+    .stat-icon.total { background: #dbeafe; color: #1d4ed8; }
+    .stat-icon.out { background: #ede9fe; color: #6d28d9; }
+    .stat-icon.returned { background: #dcfce7; color: #15803d; }
+    .stat-icon.late { background: #fee2e2; color: #dc2626; }
+    .stat-info h3 { font-size: 1.4rem; font-weight: 800; color: #7f1d1d; line-height: 1; }
+    .stat-info p { font-size: 0.66rem; color: #b91c1c; font-weight: 600; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.03em; }
+
+    /* CARD */
+    .card { background: white; border-radius: 1.4rem; padding: 1.4rem 1.5rem; border: 1px solid #fee2e2; box-shadow: 0 8px 24px -14px #dc262630; margin-bottom: 1.4rem; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.8rem; margin-bottom: 1.1rem; padding-bottom: 0.9rem; border-bottom: 1px solid #fef2f2; }
+    .card-header h2 { font-size: 1.05rem; font-weight: 700; color: #991b1b; display: flex; align-items: center; gap: 9px; }
+    .card-header h2 i { color: #dc2626; }
+    .subtitle { font-size: 0.75rem; color: #b91c1c; font-weight: 500; }
+
+    /* SCAN INPUT */
+    .scan-panel {
+      background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+      border: 2px dashed #fca5a5;
+      border-radius: 16px;
+      padding: 2rem 1.5rem;
+      text-align: center;
+      margin-bottom: 1.3rem;
+    }
+
+    .scan-icon {
+      width: 72px; height: 72px;
+      background: linear-gradient(135deg, #dc2626, #991b1b);
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 10px 24px -8px #dc262680;
+    }
+
+    .scan-panel h3 {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #991b1b;
+      margin-bottom: 0.4rem;
+    }
+
+    .scan-panel p {
+      font-size: 0.82rem;
+      color: #b91c1c;
+      margin-bottom: 1.3rem;
+    }
+
+    .scan-input-wrapper {
+      display: flex;
+      gap: 0.7rem;
+      max-width: 620px;
+      margin: 0 auto;
+      flex-wrap: wrap;
+    }
+
+    .scan-input-wrapper input {
+      flex: 1;
+      min-width: 220px;
+      padding: 1rem 1.2rem;
+      border: 2px solid #fecaca;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #7f1d1d;
+      outline: none;
+      background: white;
+      letter-spacing: 0.03em;
+      text-align: center;
+    }
+
+    .scan-input-wrapper input:focus {
+      border-color: #dc2626;
+      box-shadow: 0 0 0 4px #dc262620;
+    }
+
+    .scan-input-wrapper input::placeholder {
+      color: #fca5a5;
+      font-weight: 500;
+    }
+
+    /* VERIFY RESULT */
+    .verify-result { padding: 1.5rem; border-radius: 14px; margin-bottom: 1rem; }
+    .verify-result.valid { background: #dcfce7; border: 2.5px solid #15803d; }
+    .verify-result.invalid { background: #fee2e2; border: 2.5px solid #dc2626; }
+    .verify-result.warning { background: #fef3d6; border: 2.5px solid #d97706; }
+
+    .verify-result .vr-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 1.2rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px dashed rgba(0,0,0,0.08);
+    }
+
+    .vr-icon {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      flex-shrink: 0;
+    }
+
+    .verify-result.valid .vr-icon { background: #15803d; color: white; }
+    .verify-result.invalid .vr-icon { background: #dc2626; color: white; }
+    .verify-result.warning .vr-icon { background: #d97706; color: white; }
+
+    .vr-title h3 { font-size: 1.2rem; font-weight: 900; letter-spacing: 0.02em; }
+    .verify-result.valid .vr-title h3 { color: #065f46; }
+    .verify-result.invalid .vr-title h3 { color: #991b1b; }
+    .verify-result.warning .vr-title h3 { color: #92400e; }
+
+    .vr-title p { font-size: 0.78rem; font-weight: 600; margin-top: 3px; opacity: 0.75; }
+
+    .student-info-grid {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 1.2rem;
+      align-items: start;
+      margin-bottom: 1.2rem;
+    }
+
+    .student-photo-lg {
+      width: 120px; height: 120px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #dc2626, #991b1b);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 2.5rem;
+      font-weight: 800;
+      overflow: hidden;
+      flex-shrink: 0;
+      box-shadow: 0 10px 24px -8px rgba(0,0,0,0.3);
+      border: 3px solid white;
+    }
+
+    .student-photo-lg img { width: 100%; height: 100%; object-fit: cover; }
+
+    .student-details-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.8rem;
+    }
+
+    .detail-block { background: white; padding: 0.75rem 0.9rem; border-radius: 10px; }
+    .detail-block label { font-size: 0.62rem; text-transform: uppercase; color: #64748b; font-weight: 800; display: block; margin-bottom: 4px; letter-spacing: 0.05em; }
+    .detail-block span { font-size: 0.88rem; font-weight: 700; color: #0f172a; word-break: break-word; }
+
+    .verify-actions { display: flex; gap: 0.7rem; flex-wrap: wrap; margin-top: 1.2rem; }
+    .verify-actions .btn { flex: 1; justify-content: center; min-width: 180px; padding: 0.85rem 1.2rem; font-size: 0.88rem; }
+
+    /* BUTTONS */
+    .btn { padding: 0.6rem 1.2rem; border-radius: 10px; font-size: 0.8rem; font-weight: 700; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 7px; transition: 0.15s; font-family: inherit; }
+    .btn-primary { background: linear-gradient(135deg, #dc2626, #991b1b); color: white; box-shadow: 0 6px 16px -6px #dc262680; }
+    .btn-primary:hover { transform: translateY(-2px); }
+    .btn-success { background: linear-gradient(135deg, #10b981, #047857); color: white; box-shadow: 0 6px 16px -6px #10b98180; }
+    .btn-success:hover { transform: translateY(-2px); }
+    .btn-danger { background: #fee2e2; color: #b91c1c; border: 1.5px solid #fecaca; }
+    .btn-outline { background: white; color: #991b1b; border: 1.5px solid #fecaca; }
+    .btn-outline:hover { background: #fef2f2; }
+    .btn-sm { padding: 0.4rem 0.85rem; font-size: 0.72rem; }
+
+    /* TABLE */
+    .table-wrapper { overflow-x: auto; border-radius: 12px; border: 1px solid #fef2f2; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    table thead th { text-align: left; padding: 0.7rem 0.85rem; font-size: 0.65rem; text-transform: uppercase; color: #b91c1c; font-weight: 700; background: #fef2f2; border-bottom: 1px solid #fee2e2; white-space: nowrap; }
+    table tbody td { padding: 0.8rem 0.85rem; border-bottom: 1px solid #fef2f2; color: #7f1d1d; font-weight: 500; vertical-align: middle; }
+    table tbody tr:hover { background: #fef2f2; }
+
+    .table-avatar { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #dc2626, #991b1b); color: white; display: inline-flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; margin-right: 8px; vertical-align: middle; overflow: hidden; }
+    .table-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .table-name { display: inline-block; vertical-align: middle; font-weight: 600; color: #7f1d1d; }
+    .table-name small { display: block; font-weight: 500; color: #fca5a5; font-size: 0.66rem; margin-top: 2px; }
+
+    .pill { padding: 0.25rem 0.7rem; border-radius: 40px; font-size: 0.65rem; font-weight: 700; display: inline-block; }
+    .pill.approved { background: #dcfce7; color: #15803d; }
+    .pill.out { background: #ede9fe; color: #6d28d9; }
+    .pill.returned { background: #dbeafe; color: #1d4ed8; }
+    .pill.late { background: #fee2e2; color: #b91c1c; }
+    .pill.expired { background: #e5e7eb; color: #4b5563; }
+
+    .empty-state { text-align: center; padding: 3rem 1rem; color: #fca5a5; }
+    .empty-state i { font-size: 2.6rem; color: #fecaca; margin-bottom: 0.8rem; display: block; }
+    .empty-state h3 { font-size: 1rem; color: #b91c1c; font-weight: 700; }
+
+    /* TOAST */
+    .toast-alert { position: fixed; top: 20px; right: 20px; z-index: 200; padding: 0.9rem 1.3rem; border-radius: 12px; font-size: 0.88rem; font-weight: 600; box-shadow: 0 12px 30px -10px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 10px; max-width: 400px; animation: slideIn 0.3s ease; }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+
+    .export-bar { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1rem; }
+
+    @media (max-width: 900px) {
+      .sidebar { width: 70px; padding: 1rem 0.4rem; align-items: center; }
+      .sidebar-brand h2, .sidebar-brand span, .nav-menu a span, .nav-section, .nav-badge { display: none; }
+      .sidebar-brand .logo { margin: 0 auto; }
+      .nav-menu a { justify-content: center; padding: 0.65rem 0.5rem; }
+      .main-content { max-width: calc(100% - 70px); padding: 1.3rem 1.1rem; }
+    }
+    @media (max-width: 600px) {
+      .main-content { padding: 1rem; }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+      .student-info-grid { grid-template-columns: 1fr; text-align: center; }
+      .student-photo-lg { margin: 0 auto; }
+      .verify-actions .btn { flex: 1 1 100%; }
+    }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="logo"><i class="fas fa-shield-alt"></i></div>
+      <div>
+        <h2>Security Portal</h2>
+        <span>Gate Verification</span>
+      </div>
+    </div>
+    <ul class="nav-menu">
+      <li class="nav-section">Gate Operations</li>
+      <li><a class="active" data-section="scan" onclick="switchSection('scan', this)"><i class="fas fa-qrcode"></i> <span>Scan & Verify</span></a></li>
+      <li><a data-section="outside" onclick="switchSection('outside', this)"><i class="fas fa-door-open"></i> <span>Currently Outside</span><span class="nav-badge" id="badgeOutside">0</span></a></li>
+      <li><a data-section="history" onclick="switchSection('history', this)"><i class="fas fa-history"></i> <span>Today's Log</span></a></li>
+      <li class="logout-item"><a onclick="logout()"><i class="fas fa-sign-out-alt"></i> <span>Logout</span></a></li>
+    </ul>
+  </aside>
+
+  <main class="main-content">
+    <div class="topbar">
+      <div class="page-title">
+        <h1 id="pageTitle">Scan & Verify</h1>
+        <p id="pageSubtitle">Scan QR code to verify student permission</p>
+      </div>
+      <div class="topbar-right">
+        <span class="live-pill" id="livePill">
+          <span class="live-dot"></span> LIVE
+        </span>
+        <div class="user-chip">
+          <div class="avatar" id="avatarInitials">S</div>
+          <div class="user-info">
+            <strong id="chipName">Security</strong>
+            <span id="chipGate">--</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCAN SECTION -->
+    <div class="section-view active" id="section-scan">
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-icon total"><i class="fas fa-file-alt"></i></div><div class="stat-info"><h3 id="statTotal">0</h3><p>Total Approved</p></div></div>
+        <div class="stat-card"><div class="stat-icon out"><i class="fas fa-door-open"></i></div><div class="stat-info"><h3 id="statOut">0</h3><p>Currently Out</p></div></div>
+        <div class="stat-card"><div class="stat-icon returned"><i class="fas fa-door-closed"></i></div><div class="stat-info"><h3 id="statReturned">0</h3><p>Returned Today</p></div></div>
+        <div class="stat-card"><div class="stat-icon late"><i class="fas fa-clock"></i></div><div class="stat-info"><h3 id="statLate">0</h3><p>Late Returns</p></div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2><i class="fas fa-qrcode"></i> Scan or Enter Permission ID</h2>
+        </div>
+
+        <div class="scan-panel">
+          <div class="scan-icon"><i class="fas fa-qrcode"></i></div>
+          <h3>Scan QR Code or Type Permission ID</h3>
+          <p>Enter student's Permission ID (e.g., PER-2026-00001)</p>
+
+          <div class="scan-input-wrapper">
+            <input type="text" id="scanInput" placeholder="PER-2026-XXXXX" autofocus autocomplete="off">
+            <button class="btn btn-primary" onclick="verifyPermission()"><i class="fas fa-search"></i> Verify</button>
+            <button class="btn btn-outline" onclick="clearScan()"><i class="fas fa-times"></i></button>
+          </div>
+        </div>
+
+        <div id="verifyResult"></div>
+      </div>
+    </div>
+
+    <!-- OUTSIDE SECTION -->
+    <div class="section-view" id="section-outside">
+      <div class="card">
+        <div class="card-header"><h2><i class="fas fa-door-open"></i> Students Currently Outside</h2><span class="subtitle" id="outsideCount">0</span></div>
+        <div class="export-bar">
+          <button class="btn btn-outline btn-sm" onclick="exportGateLog()"><i class="fas fa-file-csv"></i> Export Today's Log (CSV)</button>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Student</th><th>Reg No</th><th>Reason</th><th>Out Time</th><th>Expected Return</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="outsideTableBody"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="emptyOutside" style="display:none;">
+          <i class="fas fa-check-circle"></i><h3>No students currently outside</h3>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY SECTION -->
+    <div class="section-view" id="section-history">
+      <div class="card">
+        <div class="card-header"><h2><i class="fas fa-history"></i> Today's Gate Log</h2><span class="subtitle" id="logCount">0 entries</span></div>
+        <div class="export-bar">
+          <button class="btn btn-outline btn-sm" onclick="exportGateLog()"><i class="fas fa-file-csv"></i> Export CSV</button>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Time</th><th>Student</th><th>Reg No</th><th>Action</th><th>Permission ID</th><th>Gate</th></tr></thead>
+            <tbody id="historyTableBody"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="emptyHistory" style="display:none;">
+          <i class="fas fa-clipboard"></i><h3>No activity yet today</h3>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let currentSecurity = null;
+    let allPermissions = [];
+
+    window.addEventListener('DOMContentLoaded', async () => {
+  const session = localStorage.getItem('cps_currentUser');
+  const sessionActive = localStorage.getItem('cps_sessionActive');
+
+  if (!session || sessionActive !== 'true') {
+    localStorage.removeItem('cps_currentUser');
+    localStorage.removeItem('cps_sessionActive');
+    window.location.replace('../index.html');
+    return;
+  }
+  const user = JSON.parse(session);
+  if (user.role !== 'security') { window.location.replace('../index.html'); return; }
+  currentSecurity = user;
+
+  // ⭐⭐ NEW: WAIT FOR FIREBASE DATA
+  if (!window.CPS_BOOT_DONE) {
+    console.log('⏳ Security: Waiting for Firebase data...');
+    await new Promise(r => window.addEventListener('cps-boot-ready', r, { once: true }));
+    console.log('✅ Security: Firebase ready');
+  }
+      currentSecurity = user;
+
+      const initials = (user.fullName || 'S').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+      document.getElementById('avatarInitials').textContent = initials;
+      document.getElementById('chipName').textContent = user.fullName || 'Security';
+      document.getElementById('chipGate').textContent = user.gate || '--';
+
+      loadData();
+      document.getElementById('scanInput').focus();
+
+      document.getElementById('scanInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') verifyPermission();
+      });
+
+      console.log('✅ Security Dashboard Loaded:', user.fullName, '| Gate:', user.gate);
+    });
+
+    // ============================================================
+    // ⭐ REAL-TIME listener — LIVE UPDATES
+    // Fires whenever firebase-boot.js detects new data from Firestore.
+    // ============================================================
+    window.addEventListener('cps-data-updated', (e) => {
+      if (e.detail.key === 'cps_permissions' || e.detail.key === 'cps_gateLog' || e.detail.key === 'cps_students') {
+        console.log('📡 Live update:', e.detail.key, '| count:', e.detail.count);
+
+        // Show live pill
+        const pill = document.getElementById('livePill');
+        if (pill) {
+          pill.classList.add('show');
+          setTimeout(() => pill.classList.remove('show'), 2500);
+        }
+
+        // Refresh everything
+        loadData();
+
+        // Flash out count
+        const outEl = document.getElementById('statOut');
+        if (outEl) {
+          outEl.classList.remove('flash-update');
+          void outEl.offsetWidth;
+          outEl.classList.add('flash-update');
+        }
+      }
+    });
+
+    const sectionInfo = {
+      'scan': { title: 'Scan & Verify', sub: 'Scan QR code to verify student permission' },
+      'outside': { title: 'Currently Outside', sub: 'Students who have exited campus' },
+      'history': { title: 'Today\'s Log', sub: 'Complete gate activity log' }
+    };
+
+    function switchSection(section, linkEl) {
+      document.querySelectorAll('.section-view').forEach(s => s.classList.remove('active'));
+      document.getElementById('section-' + section).classList.add('active');
+      document.querySelectorAll('.nav-menu a').forEach(a => a.classList.remove('active'));
+      if (linkEl) linkEl.classList.add('active');
+      const info = sectionInfo[section];
+      if (info) {
+        document.getElementById('pageTitle').textContent = info.title;
+        document.getElementById('pageSubtitle').textContent = info.sub;
+      }
+    }
+
+    function loadData() {
+      allPermissions = JSON.parse(localStorage.getItem('cps_permissions') || '[]');
+      updateStats();
+      renderOutside();
+      renderHistory();
+    }
+
+    function updateStats() {
+      const approved = allPermissions.filter(p => ['hod_approved', 'approved', 'out', 'returned'].includes(p.status)).length;
+      const out = allPermissions.filter(p => p.status === 'out').length;
+      const today = new Date().toDateString();
+      const returnedToday = allPermissions.filter(p => p.status === 'returned' && p.returnedAt && new Date(p.returnedAt).toDateString() === today).length;
+      const late = allPermissions.filter(p => p.lateReturn).length;
+
+      document.getElementById('statTotal').textContent = approved;
+      document.getElementById('statOut').textContent = out;
+      document.getElementById('statReturned').textContent = returnedToday;
+      document.getElementById('statLate').textContent = late;
+      document.getElementById('badgeOutside').textContent = out;
+      document.getElementById('outsideCount').textContent = out + ' students';
+    }
+
+    function getStudentProfile(regNo) {
+      const students = JSON.parse(localStorage.getItem('cps_students') || '[]');
+      return students.find(s => s.regNo === regNo) || null;
+    }
+
+    // ============================================================
+    // VERIFY PERMISSION
+    // ============================================================
+    function verifyPermission() {
+      const input = document.getElementById('scanInput').value.trim();
+      if (!input) { showToast('Enter or scan Permission ID', 'error'); return; }
+
+      let permissionId = input;
+      try {
+        const data = JSON.parse(input);
+        if (data.id) permissionId = data.id;
+      } catch (e) { /* not JSON */ }
+
+      allPermissions = JSON.parse(localStorage.getItem('cps_permissions') || '[]');
+      const p = allPermissions.find(x => x.permissionId === permissionId);
+      const result = document.getElementById('verifyResult');
+
+      // Not found
+      if (!p) {
+        result.innerHTML = `
+          <div class="verify-result invalid">
+            <div class="vr-header">
+              <div class="vr-icon"><i class="fas fa-times"></i></div>
+              <div class="vr-title">
+                <h3>❌ INVALID PERMISSION</h3>
+                <p>No permission found with ID: ${escapeHtml(permissionId)}</p>
+              </div>
+            </div>
+          </div>
+        `;
+        showToast('❌ Invalid permission ID', 'error');
+        return;
+      }
+
+      const profile = getStudentProfile(p.regNo);
+      const initials = (p.fullName || 'S').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+      const photoHTML = (profile && profile.photo) ? `<img src="${profile.photo}" alt="">` : initials;
+
+      // Not approved
+      if (!['hod_approved', 'approved', 'out', 'returned'].includes(p.status)) {
+        result.innerHTML = `
+          <div class="verify-result invalid">
+            <div class="vr-header">
+              <div class="vr-icon"><i class="fas fa-ban"></i></div>
+              <div class="vr-title">
+                <h3>❌ NOT APPROVED</h3>
+                <p>This permission has not been approved by HOD yet</p>
+              </div>
+            </div>
+            <div class="student-info-grid">
+              <div class="student-photo-lg">${photoHTML}</div>
+              <div class="student-details-grid">
+                <div class="detail-block"><label>Student</label><span>${escapeHtml(p.fullName || '--')}</span></div>
+                <div class="detail-block"><label>Reg No</label><span>${escapeHtml(p.regNo || '--')}</span></div>
+                <div class="detail-block"><label>Status</label><span style="color:#b91c1c;">${getStatusText(p.status)}</span></div>
+              </div>
+            </div>
+          </div>
+        `;
+        showToast('❌ Not approved by HOD', 'error');
+        return;
+      }
+
+      // Check expiry
+      const now = new Date();
+      const [retH, retM] = (p.returnTime || '23:59').split(':');
+      const today = p.date || now.toISOString().split('T')[0];
+      const retDateTime = new Date(`${today}T${retH}:${retM}:00`);
+      const isExpired = now > retDateTime;
+
+      // If already returned
+      if (p.status === 'returned') {
+        result.innerHTML = `
+          <div class="verify-result warning">
+            <div class="vr-header">
+              <div class="vr-icon"><i class="fas fa-info"></i></div>
+              <div class="vr-title">
+                <h3>⚠️ ALREADY RETURNED</h3>
+                <p>This student has already returned from this permission</p>
+              </div>
+            </div>
+            <div class="student-info-grid">
+              <div class="student-photo-lg">${photoHTML}</div>
+              <div class="student-details-grid">
+                <div class="detail-block"><label>Student</label><span>${escapeHtml(p.fullName || '--')}</span></div>
+                <div class="detail-block"><label>Reg No</label><span>${escapeHtml(p.regNo || '--')}</span></div>
+                <div class="detail-block"><label>Returned At</label><span>${formatDateTime(p.returnedAt)}</span></div>
+                <div class="detail-block"><label>Late?</label><span>${p.lateReturn ? '⚠️ Yes' : '✅ No'}</span></div>
+              </div>
+            </div>
+          </div>
+        `;
+        showToast('⚠️ Already returned', 'warning');
+        return;
+      }
+
+      // Already out
+      if (p.status === 'out') {
+        result.innerHTML = `
+          <div class="verify-result valid">
+            <div class="vr-header">
+              <div class="vr-icon"><i class="fas fa-door-open"></i></div>
+              <div class="vr-title">
+                <h3>✓ VALID · CURRENTLY OUT</h3>
+                <p>Student is outside campus — mark return when they come back</p>
+              </div>
+            </div>
+
+            <div class="student-info-grid">
+              <div class="student-photo-lg">${photoHTML}</div>
+              <div class="student-details-grid">
+                <div class="detail-block"><label>Permission ID</label><span>${escapeHtml(p.permissionId)}</span></div>
+                <div class="detail-block"><label>Student</label><span>${escapeHtml(p.fullName || '--')}</span></div>
+                <div class="detail-block"><label>Register No</label><span>${escapeHtml(p.regNo || '--')}</span></div>
+                <div class="detail-block"><label>Branch · Section</label><span>${escapeHtml(p.branch || '--')} · ${escapeHtml(p.section || '--')}</span></div>
+                <div class="detail-block"><label>Reason</label><span>${escapeHtml(p.reason || '--')}</span></div>
+                <div class="detail-block"><label>Destination</label><span>${escapeHtml(p.destination || '--')}</span></div>
+                <div class="detail-block"><label>Out At</label><span>${formatDateTime(p.outAt)}</span></div>
+                <div class="detail-block"><label>Expected Return</label><span>${escapeHtml(p.returnTime || '--')}</span></div>
+                <div class="detail-block"><label>Teacher</label><span style="color:#15803d;">✓ ${escapeHtml(p.teacherName || '--')}</span></div>
+                <div class="detail-block"><label>HOD</label><span style="color:#15803d;">✓ ${escapeHtml(p.hodApprovedBy || '--')}</span></div>
+              </div>
+            </div>
+
+            <div class="verify-actions">
+              <button class="btn btn-success" onclick="markReturn('${p.permissionId}')"><i class="fas fa-door-closed"></i> Mark IN (Returned)</button>
+              <button class="btn btn-outline" onclick="clearScan()"><i class="fas fa-times"></i> Clear</button>
+            </div>
+          </div>
+        `;
+        showToast('✓ Student is currently OUT — mark return when back', 'info');
+        return;
+      }
+
+      // Approved, not yet OUT
+      if (isExpired) {
+        result.innerHTML = `
+          <div class="verify-result warning">
+            <div class="vr-header">
+              <div class="vr-icon"><i class="fas fa-clock"></i></div>
+              <div class="vr-title">
+                <h3>⏰ EXPIRED PERMISSION</h3>
+                <p>Valid time has passed — cannot allow exit</p>
+              </div>
+            </div>
+            <div class="student-info-grid">
+              <div class="student-photo-lg">${photoHTML}</div>
+              <div class="student-details-grid">
+                <div class="detail-block"><label>Student</label><span>${escapeHtml(p.fullName || '--')}</span></div>
+                <div class="detail-block"><label>Reg No</label><span>${escapeHtml(p.regNo || '--')}</span></div>
+                <div class="detail-block"><label>Expected Return</label><span>${escapeHtml(p.returnTime || '--')}</span></div>
+                <div class="detail-block"><label>Status</label><span style="color:#b91c1c;">Expired</span></div>
+              </div>
+            </div>
+          </div>
+        `;
+        showToast('⏰ Permission expired', 'error');
+        return;
+      }
+
+      // VALID & Ready to OUT
+      result.innerHTML = `
+        <div class="verify-result valid">
+          <div class="vr-header">
+            <div class="vr-icon"><i class="fas fa-check"></i></div>
+            <div class="vr-title">
+              <h3>✓ VALID PERMISSION</h3>
+              <p>All approvals verified — you can allow exit</p>
+            </div>
+          </div>
+
+          <div class="student-info-grid">
+            <div class="student-photo-lg">${photoHTML}</div>
+            <div class="student-details-grid">
+              <div class="detail-block"><label>Permission ID</label><span>${escapeHtml(p.permissionId)}</span></div>
+              <div class="detail-block"><label>Student</label><span>${escapeHtml(p.fullName || '--')}</span></div>
+              <div class="detail-block"><label>Register No</label><span>${escapeHtml(p.regNo || '--')}</span></div>
+              <div class="detail-block"><label>Branch · Section</label><span>${escapeHtml(p.branch || '--')} · ${escapeHtml(p.section || '--')}</span></div>
+              <div class="detail-block"><label>Reason</label><span>${escapeHtml(p.reason || '--')}</span></div>
+              <div class="detail-block"><label>Destination</label><span>${escapeHtml(p.destination || '--')}</span></div>
+              <div class="detail-block"><label>Out Time</label><span>${escapeHtml(p.outTime || '--')}</span></div>
+              <div class="detail-block"><label>Return Time</label><span>${escapeHtml(p.returnTime || '--')}</span></div>
+              <div class="detail-block"><label>Teacher</label><span style="color:#15803d;">✓ ${escapeHtml(p.teacherName || '--')}</span></div>
+              <div class="detail-block"><label>HOD</label><span style="color:#15803d;">✓ ${escapeHtml(p.hodApprovedBy || '--')}</span></div>
+            </div>
+          </div>
+
+          <div class="verify-actions">
+            <button class="btn btn-primary" onclick="markOut('${p.permissionId}')"><i class="fas fa-door-open"></i> Mark OUT (Allow Exit)</button>
+            <button class="btn btn-outline" onclick="clearScan()"><i class="fas fa-times"></i> Clear</button>
+          </div>
+        </div>
+      `;
+      showToast('✓ Valid permission — ready to allow exit', 'success');
+    }
+
+    function getStatusText(status) {
+      const map = {
+        'pending_teacher_verification': 'Pending Teacher',
+        'teacher_verified': 'Pending HOD',
+        'teacher_rejected': 'Rejected by Teacher',
+        'hod_approved': 'Approved',
+        'approved': 'Approved',
+        'hod_rejected': 'Rejected by HOD',
+        'out': 'Currently Out',
+        'returned': 'Returned',
+        'expired': 'Expired'
+      };
+      return map[status] || status;
+    }
+
+    // ============================================================
+    // MARK OUT / IN
+    // ============================================================
+    function markOut(permissionId) {
+      if (!confirm('Allow this student to EXIT campus? This will be logged.')) return;
+
+      const all = JSON.parse(localStorage.getItem('cps_permissions') || '[]');
+      const idx = all.findIndex(p => p.permissionId === permissionId);
+      if (idx === -1) return;
+
+      all[idx].status = 'out';
+      all[idx].outAt = new Date().toISOString();
+      all[idx].gateOutBy = currentSecurity.fullName;
+      all[idx].gateOutId = currentSecurity.securityId;
+      localStorage.setItem('cps_permissions', JSON.stringify(all));
+
+      addGateLog(permissionId, all[idx].fullName, all[idx].regNo, 'OUT');
+      showToast('✅ Marked OUT — student allowed to exit', 'success');
+      console.log('🚪 OUT:', permissionId, all[idx].fullName);
+      clearScan();
+      loadData();
+    }
+
+    function markReturn(permissionId) {
+      if (!confirm('Mark this student as RETURNED (IN)? This will be logged.')) return;
+
+      const all = JSON.parse(localStorage.getItem('cps_permissions') || '[]');
+      const idx = all.findIndex(p => p.permissionId === permissionId);
+      if (idx === -1) return;
+
+      const now = new Date();
+      const [retH, retM] = (all[idx].returnTime || '23:59').split(':');
+      const today = all[idx].date || now.toISOString().split('T')[0];
+      const expected = new Date(`${today}T${retH}:${retM}:00`);
+      const isLate = now > expected;
+
+      all[idx].status = 'returned';
+      all[idx].returnedAt = now.toISOString();
+      all[idx].gateInBy = currentSecurity.fullName;
+      all[idx].gateInId = currentSecurity.securityId;
+      all[idx].lateReturn = isLate;
+      localStorage.setItem('cps_permissions', JSON.stringify(all));
+
+      addGateLog(permissionId, all[idx].fullName, all[idx].regNo, 'IN' + (isLate ? ' (Late)' : ''));
+      showToast(isLate ? '⚠️ Returned LATE — parent notified' : '✅ Returned on time', isLate ? 'warning' : 'success');
+      console.log('🚪 IN:', permissionId, all[idx].fullName, '| Late:', isLate);
+      clearScan();
+      loadData();
+    }
+
+    function clearScan() {
+      document.getElementById('scanInput').value = '';
+      document.getElementById('verifyResult').innerHTML = '';
+      document.getElementById('scanInput').focus();
+    }
+
+    // ============================================================
+    // RENDER OUTSIDE
+    // ============================================================
+    function renderOutside() {
+      const outside = allPermissions.filter(p => p.status === 'out');
+      const tbody = document.getElementById('outsideTableBody');
+      const empty = document.getElementById('emptyOutside');
+      const table = tbody.closest('table');
+
+      if (outside.length === 0) {
+        tbody.innerHTML = '';
+        table.style.display = 'none';
+        empty.style.display = 'block';
+        return;
+      }
+      table.style.display = 'table';
+      empty.style.display = 'none';
+
+      tbody.innerHTML = outside.map(p => {
+        const profile = getStudentProfile(p.regNo);
+        const initials = (p.fullName || 'S').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+        const photoHTML = (profile && profile.photo) ? `<img src="${profile.photo}" alt="">` : initials;
+
+        const now = new Date();
+        const [retH, retM] = (p.returnTime || '23:59').split(':');
+        const today = p.date || now.toISOString().split('T')[0];
+        const expected = new Date(`${today}T${retH}:${retM}:00`);
+        const isLate = now > expected;
+
+        return `
+          <tr>
+            <td>
+              <span class="table-avatar">${photoHTML}</span>
+              <span class="table-name">${escapeHtml(p.fullName || '--')}<small>${escapeHtml(p.permissionId || '')}</small></span>
+            </td>
+            <td>${escapeHtml(p.regNo || '--')}</td>
+            <td>${escapeHtml(p.reason || '--')}</td>
+            <td>${formatTime(p.outAt)}</td>
+            <td>${escapeHtml(p.returnTime || '--')}</td>
+            <td><span class="pill ${isLate ? 'late' : 'out'}">${isLate ? 'LATE' : 'OUT'}</span></td>
+            <td><button class="btn btn-success btn-sm" onclick="markReturn('${p.permissionId}')"><i class="fas fa-check"></i> Mark IN</button></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // ============================================================
+    // RENDER HISTORY
+    // ============================================================
+    function renderHistory() {
+      const logs = JSON.parse(localStorage.getItem('cps_gateLog') || '[]');
+      const today = new Date().toDateString();
+      const todayLogs = logs.filter(l => new Date(l.at).toDateString() === today);
+      const tbody = document.getElementById('historyTableBody');
+      const empty = document.getElementById('emptyHistory');
+      const table = tbody.closest('table');
+
+      document.getElementById('logCount').textContent = todayLogs.length + ' entries';
+
+      if (todayLogs.length === 0) {
+        tbody.innerHTML = '';
+        table.style.display = 'none';
+        empty.style.display = 'block';
+        return;
+      }
+      table.style.display = 'table';
+      empty.style.display = 'none';
+
+      tbody.innerHTML = todayLogs.map(log => `
+        <tr>
+          <td><strong>${formatTime(log.at)}</strong></td>
+          <td>${escapeHtml(log.studentName)}</td>
+          <td>${escapeHtml(log.regNo)}</td>
+          <td><span class="pill ${log.action.includes('OUT') ? 'out' : 'returned'}">${escapeHtml(log.action)}</span></td>
+          <td><strong>${escapeHtml(log.permissionId)}</strong></td>
+          <td>${escapeHtml(log.gate || 'Main Gate')}</td>
+        </tr>
+      `).join('');
+    }
+
+    function addGateLog(permissionId, studentName, regNo, action) {
+      const logs = JSON.parse(localStorage.getItem('cps_gateLog') || '[]');
+      logs.unshift({
+        at: new Date().toISOString(),
+        permissionId,
+        studentName,
+        regNo,
+        action,
+        by: currentSecurity.fullName,
+        byId: currentSecurity.securityId,
+        gate: currentSecurity.gate || 'Main Gate'
+      });
+      localStorage.setItem('cps_gateLog', JSON.stringify(logs.slice(0, 1000)));
+    }
+
+    // ============================================================
+    // CSV EXPORT
+    // ============================================================
+    function exportGateLog() {
+      const logs = JSON.parse(localStorage.getItem('cps_gateLog') || '[]');
+      const today = new Date().toDateString();
+      const todayLogs = logs.filter(l => new Date(l.at).toDateString() === today);
+
+      if (todayLogs.length === 0) { showToast('No logs to export.', 'info'); return; }
+
+      const headers = ['Time', 'Student Name', 'Register No', 'Action', 'Permission ID', 'Gate', 'Security Officer'];
+
+      const rows = todayLogs.map(l => [
+        new Date(l.at).toLocaleString('en-IN'),
+        l.studentName || '',
+        l.regNo || '',
+        l.action || '',
+        l.permissionId || '',
+        l.gate || 'Main Gate',
+        l.by || ''
+      ]);
+
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      ].join('\n');
+
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Gate-Log-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast(`✅ Exported ${todayLogs.length} entries`, 'success');
+    }
+
+    // ============================================================
+    // HELPERS
+    // ============================================================
+    function showToast(message, type = 'info') {
+      const colors = {
+        success: { bg: '#dcfce7', color: '#166534', border: '#bbf7d0', icon: 'fa-check-circle' },
+        error: { bg: '#fee2e2', color: '#991b1b', border: '#fecaca', icon: 'fa-exclamation-circle' },
+        info: { bg: '#dbeafe', color: '#1e40af', border: '#bfdbfe', icon: 'fa-info-circle' },
+        warning: { bg: '#fef3c7', color: '#92400e', border: '#fde68a', icon: 'fa-exclamation-triangle' }
+      };
+      const c = colors[type] || colors.info;
+      const existing = document.querySelector('.toast-alert');
+      if (existing) existing.remove();
+      const toast = document.createElement('div');
+      toast.className = 'toast-alert';
+      toast.style.background = c.bg;
+      toast.style.color = c.color;
+      toast.style.border = '1px solid ' + c.border;
+      toast.innerHTML = `<i class="fas ${c.icon}"></i> <span>${message}</span>`;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.style.transition = '0.3s';
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(30px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    function formatTime(iso) {
+      if (!iso) return '--';
+      try { return new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }); }
+      catch (e) { return iso; }
+    }
+
+    function formatDateTime(iso) {
+      if (!iso) return '--';
+      try { return new Date(iso).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); }
+      catch (e) { return iso; }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+    function logout() {
+      if (confirm('Logout from security portal?')) {
+        localStorage.removeItem('cps_currentUser');
+        localStorage.removeItem('cps_sessionActive');
+        window.location.replace('../index.html');
+      }
+    }
+  </script>
+</body>
+</html>
