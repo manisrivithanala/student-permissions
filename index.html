@@ -128,6 +128,16 @@
     .form-footer-text a { color: #0f7db6; font-weight: 700; text-decoration: none; cursor: pointer; }
     .form-footer-text a:hover { text-decoration: underline; }
 
+    /* toast animation */
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+
     @media (max-width: 900px) {
       .auth-container { grid-template-columns: 1fr; max-width: 540px; min-height: auto; }
       .auth-left { padding: 2rem 1.8rem; min-height: auto; }
@@ -506,22 +516,21 @@
             </div>
             <div class="form-row">
               <div class="form-group">
-                <label>Department <span class="required">*</span></label>
-                <div class="input-wrapper"><i class="fas fa-building prefix"></i>
-                  <select id="hreg-department" required>
-                    <option value="">Select Department</option>
-                    <option value="CSE">CSE</option>
-                    <option value="ECE">ECE</option>
-                    <option value="AIML">AIML</option>
-                    <option value="AIDS">AIDS</option>
-                    <option value="IT">IT</option>
-                    <option value="CIVIL">CIVIL</option>
-                    <option value="EEE">EEE</option>
-                    <option value="MECH">MECH</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-              </div>
+  <label>Department <span class="required">*</span></label>
+  <div class="input-wrapper"><i class="fas fa-building prefix"></i>
+    <select id="hreg-department" required>
+      <option value="">Select Department</option>
+      <option value="AIML,AIDS">AIML + AIDS (Combined HOD)</option>
+      <option value="CSE">CSE</option>
+      <option value="ECE">ECE</option>
+      <option value="IT">IT</option>
+      <option value="CIVIL">CIVIL</option>
+      <option value="EEE">EEE</option>
+      <option value="MECH">MECH</option>
+      <option value="Other">Other</option>
+    </select>
+  </div>
+</div>
               <div class="form-group">
                 <label>College Email <span class="required">*</span></label>
                 <div class="input-wrapper"><i class="fas fa-envelope prefix"></i><input type="email" id="hreg-email" placeholder="hod@bvcits.edu.in" required></div>
@@ -646,6 +655,33 @@
     let regPhotoBase64 = null;
 
     // ================================================================
+    // TOAST NOTIFICATIONS
+    // ================================================================
+    function showNotification(message, type = 'success') {
+      let container = document.getElementById('toast-container');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px;';
+        document.body.appendChild(container);
+      }
+
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.style.cssText = 'min-width: 250px; padding: 14px 18px; border-radius: 12px; color: #fff; font-size: 0.95rem; font-weight: 500; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15); display: flex; align-items: center; gap: 10px; animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s forwards;';
+      toast.style.background = type === 'success' ? '#10b981' : '#ef4444';
+      
+      const icon = type === 'success' ? '<i class="fas fa-check-circle"></i>' : '<i class="fas fa-exclamation-circle"></i>';
+      toast.innerHTML = `${icon} <span>${message}</span>`;
+
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+
+    // ================================================================
     // PHOTO PREVIEW
     // ================================================================
     function previewRegPhoto(event) {
@@ -654,11 +690,13 @@
 
       if (file.size > 500 * 1024) {
         showAlert('Photo size must be less than 500KB.', 'error');
+        showNotification('Photo size must be less than 500KB.', 'error');
         event.target.value = '';
         return;
       }
       if (!file.type.startsWith('image/')) {
         showAlert('Please upload an image file (JPG/PNG).', 'error');
+        showNotification('Please upload an image file (JPG/PNG).', 'error');
         event.target.value = '';
         return;
       }
@@ -742,13 +780,13 @@
           role: 'student'
         };
 
-        if (!validateDomain(userData.email)) { showAlert('Only @bvcits.edu.in email allowed.', 'error'); return; }
-        if (userData.password !== userData.confirm) { showAlert('Passwords do not match.', 'error'); return; }
-        if (!/^\d{10}$/.test(userData.mobile) || !/^\d{10}$/.test(userData.parentMobile)) { showAlert('Mobile must be 10 digits.', 'error'); return; }
-        if (!regPhotoBase64) { showAlert('Please upload a profile photo.', 'error'); return; }
+        if (!validateDomain(userData.email)) { showAlert('Only @bvcits.edu.in email allowed.', 'error'); showNotification('Only @bvcits.edu.in email allowed.', 'error'); return; }
+        if (userData.password !== userData.confirm) { showAlert('Passwords do not match.', 'error'); showNotification('Passwords do not match.', 'error'); return; }
+        if (!/^\d{10}$/.test(userData.mobile) || !/^\d{10}$/.test(userData.parentMobile)) { showAlert('Mobile must be 10 digits.', 'error'); showNotification('Mobile must be 10 digits.', 'error'); return; }
+        if (!regPhotoBase64) { showAlert('Please upload a profile photo.', 'error'); showNotification('Please upload a profile photo.', 'error'); return; }
 
         const existing = JSON.parse(localStorage.getItem(cfg.storageKey) || '[]');
-        if (existing.find(s => s.regNo === userData.regNo)) { showAlert('Register number already exists. Please login.', 'error'); return; }
+        if (existing.find(s => s.regNo === userData.regNo)) { showAlert('Register number already exists. Please login.', 'error'); showNotification('Register number already exists. Please login.', 'error'); return; }
 
         delete userData.confirm;
         userData.registeredAt = new Date().toISOString();
@@ -785,11 +823,11 @@
           confirm: document.getElementById('treg-confirmPassword').value,
           role: 'teacher'
         };
-        if (!validateDomain(userData.email)) { showAlert('Only @bvcits.edu.in email allowed.', 'error'); return; }
-        if (userData.password !== userData.confirm) { showAlert('Passwords do not match.', 'error'); return; }
+        if (!validateDomain(userData.email)) { showAlert('Only @bvcits.edu.in email allowed.', 'error'); showNotification('Only @bvcits.edu.in email allowed.', 'error'); return; }
+        if (userData.password !== userData.confirm) { showAlert('Passwords do not match.', 'error'); showNotification('Passwords do not match.', 'error'); return; }
 
         const existing = JSON.parse(localStorage.getItem(cfg.storageKey) || '[]');
-        if (existing.find(t => t.teacherId === userData.teacherId)) { showAlert('Teacher ID already exists.', 'error'); return; }
+        if (existing.find(t => t.teacherId === userData.teacherId)) { showAlert('Teacher ID already exists.', 'error'); showNotification('Teacher ID already exists.', 'error'); return; }
 
         delete userData.confirm;
         userData.registeredAt = new Date().toISOString();
@@ -810,11 +848,11 @@
           confirm: document.getElementById('hreg-confirmPassword').value,
           role: 'hod'
         };
-        if (!validateDomain(userData.email)) { showAlert('Only @bvcits.edu.in email allowed.', 'error'); return; }
-        if (userData.password !== userData.confirm) { showAlert('Passwords do not match.', 'error'); return; }
+        if (!validateDomain(userData.email)) { showAlert('Only @bvcits.edu.in email allowed.', 'error'); showNotification('Only @bvcits.edu.in email allowed.', 'error'); return; }
+        if (userData.password !== userData.confirm) { showAlert('Passwords do not match.', 'error'); showNotification('Passwords do not match.', 'error'); return; }
 
         const existing = JSON.parse(localStorage.getItem(cfg.storageKey) || '[]');
-        if (existing.find(h => h.hodId === userData.hodId)) { showAlert('HOD ID already exists.', 'error'); return; }
+        if (existing.find(h => h.hodId === userData.hodId)) { showAlert('HOD ID already exists.', 'error'); showNotification('HOD ID already exists.', 'error'); return; }
 
         delete userData.confirm;
         userData.registeredAt = new Date().toISOString();
@@ -834,10 +872,10 @@
           confirm: document.getElementById('sreg-confirmPassword').value,
           role: 'security'
         };
-        if (userData.password !== userData.confirm) { showAlert('Passwords do not match.', 'error'); return; }
+        if (userData.password !== userData.confirm) { showAlert('Passwords do not match.', 'error'); showNotification('Passwords do not match.', 'error'); return; }
 
         const existing = JSON.parse(localStorage.getItem(cfg.storageKey) || '[]');
-        if (existing.find(s => s.securityId === userData.securityId)) { showAlert('Security ID already exists.', 'error'); return; }
+        if (existing.find(s => s.securityId === userData.securityId)) { showAlert('Security ID already exists.', 'error'); showNotification('Security ID already exists.', 'error'); return; }
 
         delete userData.confirm;
         userData.registeredAt = new Date().toISOString();
@@ -847,6 +885,7 @@
       }
 
       showAlert('Registration successful! Please login.', 'success');
+      showNotification('Registration successful! Please login.', 'success');
 
       setTimeout(() => {
         const panel = document.getElementById('panel-' + role);
@@ -856,7 +895,7 @@
     }
 
     // ================================================================
-    // LOGIN
+    // LOGIN — with persistent session (auto-redirect if already logged in)
     // ================================================================
     function handleLogin(e, role) {
       e.preventDefault();
@@ -884,6 +923,7 @@
 
       if (users.length === 0) {
         showAlert('No registered ' + role + ' found. Please register first.', 'error');
+        showNotification('No registered ' + role + ' found. Please register first.', 'error');
         return;
       }
 
@@ -895,22 +935,50 @@
 
       if (!user) {
         showAlert('No account found with this ID. Please check or register.', 'error');
+        showNotification('No account found with this ID. Please check or register.', 'error');
         return;
       }
 
       if (user.password !== password) {
         showAlert('Incorrect password. Please try again.', 'error');
+        showNotification('Incorrect password. Please try again.', 'error');
         return;
       }
 
+      // persist session
       localStorage.setItem('cps_currentUser', JSON.stringify(user));
       localStorage.setItem('cps_sessionActive', 'true');
       showAlert('Login successful! Redirecting...', 'success');
+      showNotification('Login successful! Redirecting...', 'success');
       console.log('✅ Login success:', role, id);
 
       setTimeout(() => {
         window.location.href = cfg.dashboard;
       }, 800);
+    }
+
+    // ================================================================
+    // AUTO-LOGIN — if session already active, skip login page
+    // ================================================================
+    function checkPersistentSession() {
+      const sessionActive = localStorage.getItem('cps_sessionActive');
+      if (sessionActive !== 'true') return;
+
+      const userJson = localStorage.getItem('cps_currentUser');
+      if (!userJson) return;
+
+      try {
+        const user = JSON.parse(userJson);
+        if (user && user.role && roleConfig[user.role]) {
+          const targetDashboard = roleConfig[user.role].dashboard;
+          console.log('🔐 Persistent session found for', user.role, '— redirecting to', targetDashboard);
+          window.location.href = targetDashboard;
+        }
+      } catch (e) {
+        console.warn('Session parse error, clearing...');
+        localStorage.removeItem('cps_currentUser');
+        localStorage.removeItem('cps_sessionActive');
+      }
     }
 
     // ================================================================
@@ -936,14 +1004,17 @@
     });
 
     // ================================================================
-    // INIT
+    // INIT — check session, then load
     // ================================================================
     window.addEventListener('DOMContentLoaded', () => {
+      // First: auto-login check
+      checkPersistentSession();
+
       ['cps_students', 'cps_teachers', 'cps_hods', 'cps_security'].forEach(key => {
         const data = JSON.parse(localStorage.getItem(key) || '[]');
         console.log(`   ${key}: ${data.length} records`);
       });
-      console.log('%c🎓 Auth Loaded — 4 roles', 'color: #0f7db6; font-size: 14px; font-weight: bold;');
+      console.log('%c🎓 Auth Loaded — 4 roles | Persistent session enabled', 'color: #0f7db6; font-size: 14px; font-weight: bold;');
     });
   </script>
 </body>
